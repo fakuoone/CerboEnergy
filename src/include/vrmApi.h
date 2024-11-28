@@ -5,9 +5,8 @@
 #include <curl/curl.h>
 
 #include <string>
-#include <iostream>
 #include <fstream>
-#include <sstream>
+
 
 class CerboVrm {
 private:
@@ -24,17 +23,17 @@ private:
         Login login;
         std::string filename = "B:/Programmieren/C/CerboEnergy/doc/passwordApi.txt";
         std::ifstream loginStream(filename);
-        std::string temp;
         if (!loginStream.is_open()) {
             std::string errorText = "Can't open file" + filename;
             CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
+            return login;
+        }
+        if (std::getline(loginStream, login.userName)) {
+            if (!std::getline(loginStream, login.password)) {
+                CerboLog::AddEntry("Password line missing in file.", LogTypes::Categories::FAILURE);
+            }
         } else {
-            while (getline(loginStream, temp)) {
-                login.userName = temp;
-            }
-            while (getline(loginStream, temp)) {
-                login.password = temp;
-            }
+            CerboLog::AddEntry("Username line missing in file.", LogTypes::Categories::FAILURE);
         }
         return login;
     }

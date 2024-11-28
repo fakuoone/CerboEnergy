@@ -16,7 +16,8 @@ namespace GUITypes {
         READ_DATA,
         DISCONNECT,
         BAR,
-        LINE
+        LINE,
+        PAUSE
     };
 
     struct Icon {
@@ -37,6 +38,7 @@ namespace GUITypes {
         {2, Icon{IconVariants::DISCONNECT, "/ressource/icons/disconnect.png"}},
         {3, Icon{IconVariants::BAR, "/ressource/icons/bar.png"}},
         {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},
+        {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}
     };
 
     enum class DataSource {

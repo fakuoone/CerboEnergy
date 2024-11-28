@@ -66,6 +66,7 @@ namespace CerboGui {
             GUITypes::IconData connectIcon = IconMap.at(GUITypes::IconVariants::CONNECT);
             GUITypes::IconData disConnectIcon = IconMap.at(GUITypes::IconVariants::DISCONNECT);
             GUITypes::IconData readIcon = IconMap.at(GUITypes::IconVariants::READ_DATA);
+            GUITypes::IconData pauseIcon = IconMap.at(GUITypes::IconVariants::PAUSE);
             if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
                 if (AddAppControlButton("Verbindung aufbauen", CerboSSH::GetConnectionState() < SSHTypes::ConnectionState::CONNECTED, connectIcon, false)) {
                     CerboSSH::ConnectCerbo();
@@ -75,7 +76,7 @@ namespace CerboGui {
                     CerboSSH::ReadEnergyFile();
                     VisualizerInstance->GetData(CerboSSH::GetRawString());
                 }
-                if (AddAppControlButton("Verbindung trennen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::CONNECTED, disConnectIcon, true)) {
+                if (AddAppControlButton("Verbindung trennen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::SESSION, disConnectIcon, true)) {
                     CerboSSH::DisconnectCerbo();
                 }
                 AddConnectionInfo(GUITypes::DataSource::SSH);
@@ -84,8 +85,13 @@ namespace CerboGui {
                 if (AddAppControlButton("Verbindung aufbauen##2", CerboModbus::GetConnectionState() < ModbusTypes::ConnectionState::CONNECTED, connectIcon, false)) {
                     CerboModbus::Connect();
                 }
-                if (AddAppControlButton("Daten lesen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, readIcon, false)) {
+                bool readingActive = CerboModbus::GetReadingActive();
+                const GUITypes::IconData modbusIcon = readingActive ? pauseIcon : readIcon;
+                if (readingActive) {
                     CerboModbus::ReadAll();
+                }
+                if (AddAppControlButton("Daten lesen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, modbusIcon, false)) {
+                    CerboModbus::ToggleReadingActive();
                 }
                 if (AddAppControlButton("Verbindung trennen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, disConnectIcon, true)) {
                     CerboModbus::Disconnect();
