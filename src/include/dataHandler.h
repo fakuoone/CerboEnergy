@@ -1,35 +1,36 @@
 #pragma once
 
-#include "cerboPlots.h"
 #include "cerboLogger.h"
+#include "cerboPlots.h"
 #include "dataTypes.h"
 
-#include <string>
-#include <sstream>
-#include <unordered_map>
+#include <algorithm>
 #include <map>
 #include <numeric>
-#include <algorithm>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 
 #define PARSING_CHUNKSIZE 200
 
-class SSHDataHandler {
-private:
-    inline static PDTypes::HelperData CD{ 200 };
+class SSHDataHandler
+{
+  private:
+    inline static PDTypes::HelperData CD{200};
     inline static std::map<uint16_t, std::string> KeyLookup;
-    inline static std::map<std::string, std::string> KeyNameLookup = {
-        {"timestamp", "Zeitstempel"},
-        {"wBatnegative", "Entladeenergie"},
-        {"wBatpositive", "Ladeenergie"},
-        {"wSolnegative", "Solarkonsum"},
-        {"wSolpositive", "Solarerzeugung"},
-        {"wGridnegative", "Einspeiseenergie"},
-        {"wGridpositive", "Netzbezug"},
-        {"wLoadnegative", "AC-Erzeuger"},
-        {"wLoadpositive", "Lasten"} };
+    inline static std::map<std::string, std::string> KeyNameLookup = {{"timestamp", "Zeitstempel"},
+                                                                      {"wBatnegative", "Entladeenergie"},
+                                                                      {"wBatpositive", "Ladeenergie"},
+                                                                      {"wSolnegative", "Solarkonsum"},
+                                                                      {"wSolpositive", "Solarerzeugung"},
+                                                                      {"wGridnegative", "Einspeiseenergie"},
+                                                                      {"wGridpositive", "Netzbezug"},
+                                                                      {"wLoadnegative", "AC-Erzeuger"},
+                                                                      {"wLoadpositive", "Lasten"}};
 
-public:
-    static void PHead(PDTypes::EnergyStruct& ED, std::string rawData) {
+  public:
+    static void PHead(PDTypes::EnergyStruct& ED, std::string rawData)
+    {
         using namespace std;
         vector<float> emptyVector;
 
@@ -39,11 +40,13 @@ public:
         stringstream ss(temp);
         uint16_t i = 0;
 
-        while (getline(ss, temp, ',')) {
+        while (getline(ss, temp, ','))
+        {
             PDTypes::Entries firstEntry = PDTypes::Entries();
-            if (temp != "timestamp") {
-                ED.Daily.Es.insert({ temp, firstEntry });
-                KeyLookup.insert({ i, temp });
+            if (temp != "timestamp")
+            {
+                ED.Daily.Es.insert({temp, firstEntry});
+                KeyLookup.insert({i, temp});
                 i++;
             }
             CD.Header.push_back(temp);
@@ -54,7 +57,8 @@ public:
         CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS);
     }
 
-    static bool FormatData(PDTypes::EnergyStruct& ED, std::string rawData) {
+    static bool FormatData(PDTypes::EnergyStruct& ED, std::string rawData)
+    {
         using namespace std;
         vector<float> emptyVector;
 
@@ -64,7 +68,8 @@ public:
         uint16_t PreviousProgress = CD.Progress;
         bool KeepConverting = CD.Progress != CD.DataSize;
 
-        while (KeepConverting) {
+        while (KeepConverting)
+        {
             uint64_t NewRowEnd = rawData.find("\n", ++CD.Progress);
             if (NewRowEnd == string::npos)
                 NewRowEnd = CD.DataSize;
@@ -76,23 +81,32 @@ public:
             uint32_t tempTimestamp = 0;
             uint64_t veryLong = 0;
 
-            while (getline(ss, temp, ',')) {
+            while (getline(ss, temp, ','))
+            {
                 if (i == 0) // Äquivalent zu if i == 0, da der erste Eintrag timestamp sein MUSS
                 {
-                    try {
+                    try
+                    {
                         veryLong = std::stoll(temp) / 1000;
                         tempTimestamp = veryLong;
-                    } catch (std::exception& e) {
+                    }
+                    catch (std::exception& e)
+                    {
                         string errorText = "Can't convert timestamp to integer: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
                         return false;
                     }
                     ED.Daily.Times.push_back(tempTimestamp);
-                } else {
-                    try {
+                }
+                else
+                {
+                    try
+                    {
                         tempData = stof(temp);
-                    } catch (const std::exception& e) {
+                    }
+                    catch (const std::exception& e)
+                    {
                         string errorText = "Can't convert to float: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
@@ -110,7 +124,8 @@ public:
             if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize)
                 KeepConverting = false;
 
-            if (CD.Progress == CD.DataSize) {
+            if (CD.Progress == CD.DataSize)
+            {
                 KeepConverting = false;
                 CD.Completed = true;
                 CD.Error = false;
@@ -122,16 +137,14 @@ public:
         return CD.Completed;
     }
 
-    static void ResetSSHData() {
-        CD = PDTypes::HelperData{ 200 };
-    }
+    static void ResetSSHData() { CD = PDTypes::HelperData{200}; }
 
-    static std::vector<std::string> GetHeader() {
-        return CD.Header;
-    }
+    static std::vector<std::string> GetHeader() { return CD.Header; }
 
-    static void ComputeAnalytics(PDTypes::EnergyStruct& ED) {
-        for (int16_t i = 0; i < ED.Daily.Es.size(); i++) {
+    static void ComputeAnalytics(PDTypes::EnergyStruct& ED)
+    {
+        for (int16_t i = 0; i < ED.Daily.Es.size(); i++)
+        {
             using fIter = std::vector<float>::iterator;
             PDTypes::Entries& refEntry = ED.Daily.Es[KeyLookup[i]];
             fIter begin = refEntry.Values.begin();
@@ -145,53 +158,42 @@ public:
         }
     }
 
-    static bool ConversionPending() {
-        return CD.Progress != 0 && !CD.Completed && !CD.Error;
-    }
+    static bool ConversionPending() { return CD.Progress != 0 && !CD.Completed && !CD.Error; }
 
-    static bool DataAvailable() {
-        return CD.Completed;
-    }
+    static bool DataAvailable() { return CD.Completed; }
 
-    static float GetConversionProgress() {
+    static float GetConversionProgress()
+    {
         float progress = CD.DataSize != 0 ? (float)CD.Progress / (float)CD.DataSize : 0;
-        if (progress > 0) {
+        if (progress > 0)
+        {
             int16_t a = 0;
         }
         return progress;
     }
 
-    static std::string GetPlotKey(uint16_t iBar) {
-        return KeyLookup[iBar];
-    }
+    static std::string GetPlotKey(uint16_t iBar) { return KeyLookup[iBar]; }
 
-    static std::string GetPlotName(uint16_t iBar) {
-        return KeyNameLookup[GetPlotKey(iBar)];
-    }
+    static std::string GetPlotName(uint16_t iBar) { return KeyNameLookup[GetPlotKey(iBar)]; }
 
-    static std::string GetTopicName(uint16_t i) {
-        return KeyNameLookup[KeyLookup[i]];
-    }
-    static uint16_t GetDataCategories() {
-        return CD.DataCategories;
-    }
+    static std::string GetTopicName(uint16_t i) { return KeyNameLookup[KeyLookup[i]]; }
+    static uint16_t GetDataCategories() { return CD.DataCategories; }
 };
 
-class APIDataHandler {
-private:
+class APIDataHandler
+{
+  private:
     int16_t a = 0;
-public:
-    void foo() {
 
-    }
+  public:
+    void foo() {}
 };
 
-class RTDataHandler {
-private:
+class RTDataHandler
+{
+  private:
     int16_t a = 0;
-    int64_t fun = 0;
-public:
-    void foo() {
 
-    }
+  public:
+    void foo() {}
 };
