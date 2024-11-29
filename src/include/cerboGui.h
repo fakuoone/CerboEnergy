@@ -238,6 +238,29 @@ class App
         }
     }
 
+    void AddRealtimeData()
+    {
+        if (CerboModbus::GetUnitsAreCreated())
+        {
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+        }
+    }
+
+    void AddRealTimeUnitData(const ModbusUnit& targetUnit)
+    {
+        const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
+        ImGui::Text(targetUnit.name.c_str());
+        ImGui::SameLine();
+        for (const auto& [lId, lRegister] : targetRegisters)
+        {
+            ModbusTypes::RegisterResult lResult = lRegister.GetResult();
+            std::string text = lRegister.Name + ": " + std::to_string(lResult.Value);
+            ImGui::Text(text.c_str());
+        }
+    }
+
     void AddDataControls()
     {
         const std::vector<std::string> header = SSHDataHandler::GetHeader();
@@ -411,6 +434,10 @@ class App
             BeginWindow("Graph");
             VisualizerInstance->PlotGraph();
         }
+
+        BeginWindow("Echtzeitdaten");
+        AddRealtimeData();
+
         BeginWindow("Datenauswahl");
         AddDataControls();
 

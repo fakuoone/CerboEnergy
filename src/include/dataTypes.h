@@ -302,4 +302,23 @@ struct RegisterResult
     int64_t LastRefresh;
     double Value;
 };
+
+template <typename T, size_t Size> class CircularBuffer
+{
+  private:
+    std::array<T, Size> Data;
+    size_t Head{0};
+    bool Full{false};
+
+  public:
+    void AppendData(const T& _data)
+    {
+        Data[Head++] = _data;
+        if (Head == Data.max_size())
+        {
+            Full = true;
+            Head = 0;
+        }
+    }
+};
 } // namespace ModbusTypes

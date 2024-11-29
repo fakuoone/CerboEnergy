@@ -196,7 +196,7 @@ class APIDataHandler // whats that?
 class RTDataHandler
 {
   private:
-    int16_t a = 0;
+    int64_t a;
 
   public:
     void foo() {}

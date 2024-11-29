@@ -7,13 +7,18 @@
 #include "cerboLogger.h"
 #include "dataTypes.h"
 
+#define CIRC_BUFFER_SIZE 5
+
 using namespace ModbusTypes;
 class Register
 {
   private:
     bool ToBeRead;
+    bool ToBeSaved{true};
     int64_t TimeDeltaBetweenReads;
     RegisterResult Result;
+    ModbusTypes::CircularBuffer<double, CIRC_BUFFER_SIZE> ValueStorage;
+    ModbusTypes::CircularBuffer<size_t, CIRC_BUFFER_SIZE> TimeStorage;
 
     uint16_t registerBuffer[100];
     std::string logMessage;
@@ -56,13 +61,25 @@ class Register
                 Result.Value = registerBuffer[0];
                 Result.LastRefresh = Timing::GetTimeNow().ms;
             }
-            logMessage = "Read data from: " + std::to_string(Address) + ": " + std::to_string(Result.Value);
-            CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS);
+            /*             logMessage = "Read data from: " + std::to_string(Address) + ": " +
+               std::to_string(Result.Value); CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS); */
+            if (ToBeSaved)
+            {
+                SafeToBuffer();
+            }
             return;
         }
         logMessage = "Can't read registers. No connection available.";
         CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
     }
+
+    void SafeToBuffer()
+    {
+        ValueStorage.AppendData(Result.Value);
+        TimeStorage.AppendData(Result.LastRefresh);
+    }
+
+    const RegisterResult GetResult() const { return Result; }
 };
 
 class ModbusUnit
@@ -87,6 +104,8 @@ class ModbusUnit
             reg.ReadRegister(conn);
         }
     }
+
+    const std::map<uint16_t, Register>& GetRegisters() const { return registers; }
 };
 
 class CerboModbus
@@ -99,6 +118,7 @@ class CerboModbus
     static inline modbus_t* connection = nullptr;
     static inline std::string logMessage;
     static inline bool readingActive;
+    static inline bool unitsCreated;
 
     static inline std::map<Devices, ModbusUnit> units;
     static inline ConnectionState connectionState{ConnectionState::OFFLINE};
@@ -141,6 +161,7 @@ class CerboModbus
         VEBus.AddRegister(Register{"Spannung Netz L2", 4, DataUnits::VOLT, 10, 5000});
         VEBus.AddRegister(Register{"Spannung Netz L3", 5, DataUnits::VOLT, 10, 5000});
         AddUnit(Devices::VEBUS, VEBus);
+        unitsCreated = true;
     }
 
   public:
@@ -169,9 +190,12 @@ class CerboModbus
 
     static void ReadAll()
     {
-        for (auto& [unitEnum, unit] : units)
+        if (connectionState >= ConnectionState::CONNECTED)
         {
-            unit.ReadRegisters(connection);
+            for (auto& [unitEnum, unit] : units)
+            {
+                unit.ReadRegisters(connection);
+            }
         }
     }
 
@@ -180,6 +204,10 @@ class CerboModbus
     static State GetConnectionState() { return connectionState; }
 
     static bool GetReadingActive() { return readingActive; }
+
+    static const ModbusUnit& GetUnit(ModbusTypes::Devices _unit) { return units.at(_unit); }
+
+    static bool GetUnitsAreCreated() { return unitsCreated; }
 
     static void ToggleReadingActive() { readingActive = !readingActive; }
 
