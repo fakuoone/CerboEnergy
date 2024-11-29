@@ -189,6 +189,7 @@ public:
 class RTDataHandler {
 private:
     int16_t a = 0;
+    int64_t fun = 0;
 public:
     void foo() {
 

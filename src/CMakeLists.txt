@@ -1,6 +1,12 @@
 
 # cmake DCMAKE_BUILD_TYPE:STRING=Debug -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_TOOLCHAIN_FILE="B:/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-mingw-static -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_C_COMPILER:FILEPATH=C:\msys64\ucrt64\bin\gcc.exe -DCMAKE_CXX_COMPILER:FILEPATH=C:\msys64\ucrt64\bin\g++.exe --no-warn-unused-cli  -SB:/Programmieren/C/CerboEnergy/src  -BB:/Programmieren/C/CerboEnergy/build -G "MinGW Makefiles"
+
+# cmake DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_TOOLCHAIN_FILE="B:/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_C_COMPILER:FILEPATH=C:\msys64\ucrt64\bin\gcc.exe -DCMAKE_CXX_COMPILER:FILEPATH=C:\msys64\ucrt64\bin\g++.exe --no-warn-unused-cli  -SB:/Programmieren/C/CerboEnergy/src  -BB:/Programmieren/C/CerboEnergy/build -G "MinGW Makefiles"
+
 # cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
+
+# vcpkg install curl:x64-mingw-static --host-triplet=x64-mingw-static
+
 cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_C_COMPILER "C:/msys64/ucrt64/bin/gcc.exe" )
@@ -9,10 +15,21 @@ set(CMAKE_CXX_COMPILER "C:/msys64/ucrt64/bin/g++.exe" )
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(LINKTYPE "STATIC")
+
 # Set flags for static linking
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++ -lcrypt32")
-set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ -lwsock32 -lcrypt32 -lws2_32 -lcrypt32 ${CMAKE_CXX_STANDARD_LIBRARIES}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+IF(LINKTYPE STREQUAL STATIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++ -lcrypt32")
+    set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ -lwsock32 -lcrypt32 -lws2_32 -lcrypt32 ${CMAKE_CXX_STANDARD_LIBRARIES}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+    set(BUILD_SHARED_LIBS OFF)
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lcrypt32")
+    set(CMAKE_CXX_STANDARD_LIBRARIES "-limgui -limplot -lwsock32 -lcrypt32 -lws2_32 -lcrypt32 ${CMAKE_CXX_STANDARD_LIBRARIES}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+    set(BUILD_SHARED_LIBS OFF)
+endif()
+
 project(SSHEnergy VERSION 1.0)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
@@ -68,11 +85,13 @@ file(GLOB IMPLOTWRAPPER_GLOB
     ${CMAKE_SOURCE_DIR}/cerboPlots.h
     ${CMAKE_SOURCE_DIR}/cerboPlots.cpp)
 
-add_library(imgui STATIC ${IMGUI_GLOB})
+add_library(imgui ${LINKTYPE} ${IMGUI_GLOB})
+target_compile_definitions(imgui PRIVATE IMGUI_EXPORTS)
 target_include_directories(imgui PUBLIC ${IMGUI_PATH})
 target_include_directories(imgui PUBLIC ${IMGUI_PATH}/backends)
 
-add_library(implot STATIC ${IMPLOT_GLOB})
+add_library(implot ${LINKTYPE} ${IMPLOT_GLOB})
+target_compile_definitions(implot PRIVATE IMPLOT_EXPORTS)
 target_include_directories(implot PUBLIC ${IMPLOT_PATH})
 target_include_directories(implot PUBLIC ${IMGUI_PATH})
 
@@ -91,10 +110,16 @@ target_link_libraries(SSHEnergy PRIVATE ssh)
 target_link_libraries(SSHEnergy PRIVATE CURL::libcurl)
 target_link_libraries(SSHEnergy PRIVATE modbus)
 
-target_link_libraries(SSHEnergy PUBLIC imgui)
-target_link_libraries(SSHEnergy PUBLIC implot)
-target_link_libraries(SSHEnergy PUBLIC d3d11 d3dcompiler)
-target_link_libraries(SSHEnergy PUBLIC Dwmapi) 
+target_link_libraries(SSHEnergy PRIVATE imgui)
+target_link_libraries(SSHEnergy PRIVATE implot)
+target_link_libraries(SSHEnergy PRIVATE d3d11 d3dcompiler)
+target_link_libraries(SSHEnergy PRIVATE Dwmapi) 
 
-target_include_directories(SSHEnergy PUBLIC "${PROJECT_BINARY_DIR}" "B:/Programmieren/C/Libs/imgui")
-target_include_directories(SSHEnergy PUBLIC "B:/Programmieren/C/Libs/stbimage")
+target_include_directories(SSHEnergy PRIVATE "${PROJECT_BINARY_DIR}" "B:/Programmieren/C/Libs/imgui")
+
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/stbimage/include")
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/modbus/include")
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/libssh/include")
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/implot/include")
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/imgui/include")
+target_include_directories(SSHEnergy PRIVATE "B:/Programmieren/C/Libs/curl/include")
