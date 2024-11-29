@@ -5,6 +5,7 @@
 #include "dataTypes.h"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <numeric>
 #include <sstream>
@@ -18,18 +19,18 @@ class SSHDataHandler
   private:
     inline static PDTypes::HelperData CD{200};
     inline static std::map<uint16_t, std::string> KeyLookup;
-    inline static std::map<std::string, std::string> KeyNameLookup = {{"timestamp", "Zeitstempel"},
-                                                                      {"wBatnegative", "Entladeenergie"},
-                                                                      {"wBatpositive", "Ladeenergie"},
-                                                                      {"wSolnegative", "Solarkonsum"},
-                                                                      {"wSolpositive", "Solarerzeugung"},
-                                                                      {"wGridnegative", "Einspeiseenergie"},
-                                                                      {"wGridpositive", "Netzbezug"},
-                                                                      {"wLoadnegative", "AC-Erzeuger"},
-                                                                      {"wLoadpositive", "Lasten"}};
+    const inline static std::map<std::string, std::string> KeyNameLookup = {{"timestamp", "Zeitstempel"},
+                                                                            {"wBatnegative", "Entladeenergie"},
+                                                                            {"wBatpositive", "Ladeenergie"},
+                                                                            {"wSolnegative", "Solarkonsum"},
+                                                                            {"wSolpositive", "Solarerzeugung"},
+                                                                            {"wGridnegative", "Einspeiseenergie"},
+                                                                            {"wGridpositive", "Netzbezug"},
+                                                                            {"wLoadnegative", "AC-Erzeuger"},
+                                                                            {"wLoadpositive", "Lasten"}};
 
   public:
-    static void PHead(PDTypes::EnergyStruct& ED, std::string rawData)
+    static void PHead(PDTypes::EnergyStruct& ED, const std::string& rawData)
     {
         using namespace std;
         vector<float> emptyVector;
@@ -57,15 +58,18 @@ class SSHDataHandler
         CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS);
     }
 
-    static bool FormatData(PDTypes::EnergyStruct& ED, std::string rawData)
+    static bool FormatData(PDTypes::EnergyStruct& ED, const std::string& rawData)
     {
-        using namespace std;
-        vector<float> emptyVector;
+        using namespace std; // this is lazy
+        vector<float> emptyVector{};
 
         if (CD.Progress < CD.HeaderEnd)
+        {
             PHead(ED, rawData);
+        }
 
-        uint16_t PreviousProgress = CD.Progress;
+        // Please use const, it makes it much easier for others to follow logic and data flow
+        const uint16_t PreviousProgress = CD.Progress;
         bool KeepConverting = CD.Progress != CD.DataSize;
 
         while (KeepConverting)
@@ -141,19 +145,19 @@ class SSHDataHandler
 
     static std::vector<std::string> GetHeader() { return CD.Header; }
 
+    // This function shouldn't be here. It should be a member function of ED.
     static void ComputeAnalytics(PDTypes::EnergyStruct& ED)
     {
-        for (int16_t i = 0; i < ED.Daily.Es.size(); i++)
+        for (auto& keyValuePair : ED.Daily.Es)
         {
-            using fIter = std::vector<float>::iterator;
-            PDTypes::Entries& refEntry = ED.Daily.Es[KeyLookup[i]];
-            fIter begin = refEntry.Values.begin();
-            fIter end = refEntry.Values.end();
-            std::pair<fIter, fIter> minmax = std::minmax_element(begin, end);
+            PDTypes::Entries& refEntry = keyValuePair.second;
+            auto begin = refEntry.Values.cbegin();
+            auto end = refEntry.Values.cend();
+            const auto minmax = std::minmax_element(begin, end);
             refEntry.AN.Min.Value = *minmax.first;
             refEntry.AN.Max.Value = *minmax.second;
-            refEntry.AN.Min.Timestamp = ED.Daily.Times[minmax.first - begin];
-            refEntry.AN.Max.Timestamp = ED.Daily.Times[minmax.second - begin];
+            refEntry.AN.Min.Timestamp = ED.Daily.Times[std::distance(begin, minmax.first)];
+            refEntry.AN.Max.Timestamp = ED.Daily.Times[std::distance(begin, minmax.second)];
             refEntry.AN.sum = std::accumulate(begin, end, 0.0f);
         }
     }
@@ -164,9 +168,9 @@ class SSHDataHandler
 
     static float GetConversionProgress()
     {
-        float progress = CD.DataSize != 0 ? (float)CD.Progress / (float)CD.DataSize : 0;
+        const float progress = CD.DataSize != 0 ? (float)CD.Progress / (float)CD.DataSize : 0;
         if (progress > 0)
-        {
+        { // dafuq is this?
             int16_t a = 0;
         }
         return progress;
@@ -174,13 +178,13 @@ class SSHDataHandler
 
     static std::string GetPlotKey(uint16_t iBar) { return KeyLookup[iBar]; }
 
-    static std::string GetPlotName(uint16_t iBar) { return KeyNameLookup[GetPlotKey(iBar)]; }
+    static std::string GetPlotName(uint16_t iBar) { return KeyNameLookup.at(GetPlotKey(iBar)); }
 
-    static std::string GetTopicName(uint16_t i) { return KeyNameLookup[KeyLookup[i]]; }
+    static std::string GetTopicName(uint16_t i) { return KeyNameLookup.at(KeyLookup[i]); }
     static uint16_t GetDataCategories() { return CD.DataCategories; }
 };
 
-class APIDataHandler
+class APIDataHandler // whats that?
 {
   private:
     int16_t a = 0;

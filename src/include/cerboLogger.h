@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -32,40 +33,37 @@ class CerboLog
     static inline std::vector<LogTypes::Log> logs;
 
   public:
-    static uint16_t AddEntry(std::string Text, LogTypes::Categories Category)
+    static void AddEntry(std::string Text, LogTypes::Categories Category)
     {
-        TimingTypes::TimeStruct now = Timing::GetTimeNow();
-        LogTypes::Log log = {now.msString, Text, Category};
-        logs.push_back(log);
-        return logs.size();
+        const TimingTypes::TimeStruct now = Timing::GetTimeNow();
+        logs.push_back(LogTypes::Log{now.msString, std::move(Text), Category});
     }
 
-    static uint16_t DisplayLogs()
+    static void DisplayLogs()
     {
-        for (int16_t i = logs.size(); i-- > 0;)
+        for (auto it = logs.crbegin(); it != logs.crend(); ++it)
         {
-            const char* Cat;
-            switch (logs[i].Category)
+            const auto current_log = *it;
+
+            ImGui::Text(current_log.Timestamp.c_str());
+            ImGui::SameLine();
+
+            if (current_log.Category == LogTypes::Categories::SUCCESS)
             {
-            case LogTypes::Categories::SUCCESS:
-                Cat = "SUCC";
-                break;
-            case LogTypes::Categories::FAILURE:
-                Cat = "FAIL";
-                break;
-            case LogTypes::Categories::INFORMATION:
-                Cat = "INFO";
-                break;
-            default:
-                break;
+                ImGui::Text("SUCC");
             }
-            ImGui::Text(logs[i].Timestamp.c_str());
+            else if (current_log.Category == LogTypes::Categories::FAILURE)
+            {
+                ImGui::Text("FAIL");
+            }
+            else
+            {
+                assert(current_log.Category == LogTypes::Categories::INFORMATION);
+                ImGui::Text("INFO");
+            }
             ImGui::SameLine();
-            ImGui::Text(Cat);
-            ImGui::SameLine();
-            ImGui::TextWrapped(logs[i].Message.c_str());
+            ImGui::TextWrapped(current_log.Message.c_str());
         }
-        return 0;
     }
 
     static void ResetLogs() { logs.clear(); }

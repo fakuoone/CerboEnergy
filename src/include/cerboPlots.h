@@ -7,6 +7,7 @@
 #include "implot.h"
 #include "implot_internal.h"
 
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -25,6 +26,7 @@ class Visualizer
 
     struct EntryInfo
     {
+        // uint16 is hella small for a size
         uint16_t Size;
         uint16_t DataIndex;
         std::string Name;
@@ -39,13 +41,17 @@ class Visualizer
         std::vector<int32_t> SourceX;
         std::vector<float> SourceY;
 
-        PlotEntry(EntryInfo info, std::vector<int32_t> x, std::vector<float> y) : Info(info), SourceX(x), SourceY(y) {}
+        PlotEntry(EntryInfo info, std::vector<int32_t> x, std::vector<float> y)
+            : Info{std::move(info)}, SourceX{std::move(x)}, SourceY{std::move(y)}
+        {
+        }
     };
 
     std::vector<std::vector<PlotEntry>> SubPlots;
     PDTypes::EnergyStruct ED;
 
-    void ReceiveDragDropTarget(PDTypes::EnergyStruct& ED, const char* dropType, std::vector<PlotEntry> plotEntries)
+    void
+    ReceiveDragDropTarget(PDTypes::EnergyStruct& ED, const char* dropType, const std::vector<PlotEntry>& plotEntries)
     {
         // dropData muss mehr Informationen beinhalten!
         if (dropType != nullptr)
@@ -57,20 +63,21 @@ class Visualizer
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(dropType))
                     {
                         IM_ASSERT(payload->DataSize == sizeof(PDTypes::DragDrop));
-                        PDTypes::DragDrop dropData = *(const PDTypes::DragDrop*)payload->Data;
-                        dropType = nullptr;
-                        int16_t i = dropData.DataIndex;
-                        PDTypes::Entries& selectedEntry = ED.Daily.Es[SSHDataHandler::GetPlotKey(i)];
+                        // thats some s***
+                        // I don't have imgui so I can't see the ImGuiPayload type. Can you safely cast its "Data"
+                        // member to a pointer of your type DragDrop??
+                        const PDTypes::DragDrop dropData = *static_cast<const PDTypes::DragDrop*>(payload->Data);
+
+                        PDTypes::Entries& selectedEntry = ED.Daily.Es[SSHDataHandler::GetPlotKey(dropData.DataIndex)];
                         AddPlot(0,
                                 ED.Daily.Times,
                                 selectedEntry.Values,
                                 ED.Daily.Times.size(),
                                 PDTypes::PlotTypes::BARS,
                                 PDTypes::DragSource::SSHRAW,
-                                i,
+                                dropData.DataIndex,
                                 selectedEntry.PlotInfo);
-                        std::string logText = "Dropped TBD into the plot.";
-                        CerboLog::AddEntry(logText, LogTypes::Categories::SUCCESS);
+                        CerboLog::AddEntry("Dropped TBD into the plot.", LogTypes::Categories::SUCCESS);
                     }
                 }
                 ImGui::EndDragDropTarget();
@@ -78,11 +85,13 @@ class Visualizer
         }
     }
 
-    bool DropTargetValid(PDTypes::EnergyStruct& ED, std::vector<PlotEntry> plotEntries)
+    bool DropTargetValid(PDTypes::EnergyStruct& ED, const std::vector<PlotEntry>& plotEntries)
     {
         bool returnValue = false;
-        const PDTypes::BasicMetrics droppedAN = ED.Daily.Es[SSHDataHandler::GetPlotKey(DropTarget.DataIndex)].AN;
-        for (PlotEntry entry : plotEntries)
+        const PDTypes::BasicMetrics& droppedAN = ED.Daily.Es[SSHDataHandler::GetPlotKey(DropTarget.DataIndex)].AN;
+
+        // you need to explain this for/switch logic to me, this can probably be written cleaner.
+        for (const PlotEntry& entry : plotEntries)
         {
             switch (entry.Info.PlotType)
             {
@@ -107,12 +116,8 @@ class Visualizer
         return true;
     }
 
-    bool PrepareSubPlot(std::vector<PlotEntry> subPlot)
+    void PrepareSubPlot(const std::vector<PlotEntry>& subPlot)
     {
-        if (subPlot.size() < 0)
-        {
-            return false;
-        }
         PDTypes::MaxValues plotExtremes = GetXYExtremes(subPlot);
 
         ImPlot::SetupAxes(
@@ -127,11 +132,9 @@ class Visualizer
         // WORKAROUND RESIZING
         ImPlot::TagY(plotExtremes.xmax, ImVec4(0.1, 0.1, 0.1, 1), true);
         ImPlot::TagY(plotExtremes.ymax, ImVec4(0.1, 0.1, 0.1, 1), true);
-
-        return true;
     }
 
-    void PlotInSubPlot(PlotEntry plotEntry)
+    void PlotInSubPlot(const PlotEntry& plotEntry)
     {
         switch (plotEntry.Info.PlotType)
         {
@@ -146,10 +149,10 @@ class Visualizer
         }
     }
 
-    PDTypes::MaxValues GetXYExtremes(std::vector<PlotEntry> plots)
+    PDTypes::MaxValues GetXYExtremes(const std::vector<PlotEntry>& plots)
     {
         PDTypes::MaxValues returnStruct{};
-        for (PlotEntry Plot : plots)
+        for (const PlotEntry& Plot : plots)
         {
             if (Plot.Info.Metrics.Min.Value < returnStruct.ymin)
             {
@@ -163,22 +166,23 @@ class Visualizer
             {
                 returnStruct.xmin = Plot.SourceX[0];
             }
-            if (Plot.SourceX[Plot.Info.Size - 1] > returnStruct.xmax)
+            // why is not the size of sourceX used but the size stored in another member of Plot?
+            if (Plot.SourceX.back() > returnStruct.xmax)
             {
-                returnStruct.xmax = Plot.SourceX[Plot.Info.Size - 1];
+                returnStruct.xmax = Plot.SourceX.back();
             }
         }
         return returnStruct;
     }
 
-    void FinishingTouches(std::vector<PlotEntry> subPlot)
+    void FinishingTouches(const std::vector<PlotEntry>& subPlot)
     {
         if (subPlot.size() > 1)
         {
             ImDrawList* drawList = ImPlot::GetPlotDrawList();
-            PDTypes::MaxValues plotExtremes = GetXYExtremes(subPlot);
-            ImVec2 start = ImPlot::PlotToPixels(plotExtremes.xmin, 0);
-            ImVec2 end = ImPlot::PlotToPixels(plotExtremes.xmax, 0);
+            const PDTypes::MaxValues plotExtremes = GetXYExtremes(subPlot);
+            const ImVec2 start = ImPlot::PlotToPixels(plotExtremes.xmin, 0);
+            const ImVec2 end = ImPlot::PlotToPixels(plotExtremes.xmax, 0);
             drawList->AddLine(start, end, ImGui::GetColorU32(ImVec4(1, 1, 1, 0.3)));
         }
     }
@@ -200,6 +204,17 @@ class Visualizer
             const int16_t noShadingBars = 10;
             ImU32 color = colorBasic;
             float leftX, rightX;
+
+            // I have no idea what count it's passed in from outside (which is a horrible design decision) but why is it
+            // "i < count - 1" instead of the usual i < count?
+
+            // Also it is never checked, that xdata and ydata are actually big enough.
+            assert(count - 1 >= xdata.size());
+            assert(count - 1 >= ydata.size());
+            // Use assert(bool) to check pre-conditions of function that must be satisfied, but that you don't want to
+            // explicitly handle as valid error cases. Assert will (safely) crash the program in a debug build, so you
+            // can find logic errors in your code (violated precondition), but the assert will not be evaluated in a
+            // release build.
 
             for (int16_t i = 0; i < count - 1; ++i)
             {
@@ -234,6 +249,9 @@ class Visualizer
     }
 
     PDTypes::BarHover
+    // Why is dataCount passed additionally to the vectors which know their sizes?
+    // Same thing here, your function assumes, that x and y vectors are big enough. Check this, or remove the additional
+    // count argument
     FindHoveredBar(const std::vector<int32_t>& xValues, const std::vector<float>& yValues, int16_t dataCount)
     {
         PDTypes::BarHover returnData{};
@@ -331,15 +349,15 @@ class Visualizer
     }
 
   public:
-    Visualizer() {}
-
-    bool GetData(std::string rawData)
+    // Return value is never used. Think about if you actually need it and how you would treat the "false" case.
+    // Otherwise remove
+    bool GetData(const std::string& rawData)
     {
-        bool completed = SSHDataHandler::FormatData(ED, rawData);
+        const bool completed = SSHDataHandler::FormatData(ED, rawData);
         if (completed)
         {
-            std::vector<int32_t> xdata = ED.Daily.Times;
-            std::vector<float> ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
+            const std::vector<int32_t>& xdata = ED.Daily.Times;
+            const std::vector<float>& ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
             PDTypes::IsInPlot& inPlotInfo = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].PlotInfo;
             const int16_t& size = ED.Daily.Times.size();
             SSHDataHandler::ComputeAnalytics(ED);
@@ -362,48 +380,48 @@ class Visualizer
             for (std::vector<PlotEntry> SubPlot : SubPlots)
             {
                 ReceiveDragDropTarget(ED, DropTarget.SourceType.c_str(), SubPlot);
-                if (PrepareSubPlot(SubPlot))
+                PrepareSubPlot(SubPlot);
+
+                for (PlotEntry Plot : SubPlot)
                 {
-                    for (PlotEntry Plot : SubPlot)
-                    {
-                        PlotInSubPlot(Plot);
-                    }
-                    FinishingTouches(SubPlot);
+                    PlotInSubPlot(Plot);
                 }
+                FinishingTouches(SubPlot);
             }
             ImPlot::EndPlot();
         }
     }
 
-    void PrepareDropTarget(PDTypes::DragDrop DragSource) { DropTarget = DragSource; }
+    void PrepareDropTarget(const PDTypes::DragDrop& DragSource) { DropTarget = DragSource; }
 
     void AddPlot(const int16_t subPlotIndex,
-                 std::vector<int32_t>& xdata,
-                 std::vector<float>& ydata,
+                 const std::vector<int32_t>& xdata,
+                 const std::vector<float>& ydata,
                  const uint16_t& size,
                  PDTypes::PlotTypes type,
                  PDTypes::DragSource dragSourceType,
                  uint16_t dataIndex,
                  PDTypes::IsInPlot& inPlotInfo)
     {
-        const std::string pName = SSHDataHandler::GetPlotName(dataIndex);
         const std::string pKey = SSHDataHandler::GetPlotKey(dataIndex);
-        EntryInfo toAddInfo = EntryInfo{size, dataIndex, pName, type, dragSourceType, ED.Daily.Es[pKey].AN};
-        PlotEntry toAddPlot = PlotEntry{toAddInfo, xdata, ydata};
+        EntryInfo toAddInfo = EntryInfo{
+            size, dataIndex, SSHDataHandler::GetPlotName(dataIndex), type, dragSourceType, ED.Daily.Es[pKey].AN};
+        PlotEntry toAddPlot = PlotEntry{std::move(toAddInfo), xdata, ydata};
         if (SubPlots.size() == 0)
         {
             SubPlots.push_back(std::vector<PlotEntry>());
         }
         if (SubPlots.size() > subPlotIndex)
         {
-            SubPlots[subPlotIndex].push_back(toAddPlot);
+            SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
             inPlotInfo.SubPlotIndex = subPlotIndex;
         }
         else
         {
-            uint16_t subPlotSize = SubPlots.size();
-            SubPlots[subPlotSize].push_back(toAddPlot);
-            inPlotInfo.SubPlotIndex = subPlotSize;
+            assert(false && "Fix me");
+            SubPlots.resize(subPlotIndex + 1);
+            SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
+            inPlotInfo.SubPlotIndex = subPlotIndex;
         }
         inPlotInfo.InPlot = true;
     }
@@ -440,12 +458,15 @@ class Visualizer
         return false;
     }
 
-    PDTypes::IsInPlot GetIsInPlotInfo(uint16_t dataIndex)
+    // Use const member fn'S to explicity state, that it will not alter your instances data members!
+    // Could probably be applied to more functions but I don't wanna check every function, given your naming scheme
+    // doesn't even enable to quickly identify class members.
+    PDTypes::IsInPlot GetIsInPlotInfo(uint16_t dataIndex) const
     {
-        return ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo;
+        return ED.Daily.Es.at(SSHDataHandler::GetPlotKey(dataIndex)).PlotInfo;
     }
 
-    uint16_t GetSubPlotCount() { return SubPlots.size(); }
+    uint16_t GetSubPlotCount() const { return SubPlots.size(); }
 
     void ResetData()
     {

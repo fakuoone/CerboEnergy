@@ -24,24 +24,24 @@ enum class IconVariants
 
 struct Icon
 {
-    IconVariants IconType;
-    std::string RelPath;
-    Icon(IconVariants cIconType, std::string cRelPath) : IconType{cIconType}, RelPath{cRelPath} {}
+    IconVariants IconType{};
+    std::string RelPath{};
 };
 
 struct IconData
 {
-    ID3D11ShaderResourceView* texturePtr;
-    int width;
-    int height;
+    ID3D11ShaderResourceView* texturePtr{};
+    int width{};
+    int height{};
 };
 
-std::unordered_map<uint16_t, Icon> IconLookUp = {{0, Icon{IconVariants::CONNECT, "/ressource/icons/connect.png"}},
-                                                 {1, Icon{IconVariants::READ_DATA, "/ressource/icons/readdata.png"}},
-                                                 {2, Icon{IconVariants::DISCONNECT, "/ressource/icons/disconnect.png"}},
-                                                 {3, Icon{IconVariants::BAR, "/ressource/icons/bar.png"}},
-                                                 {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},
-                                                 {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}};
+const std::unordered_map<uint16_t, Icon> IconLookUp{
+    {0, Icon{IconVariants::CONNECT, "/ressource/icons/connect.png"}},
+    {1, Icon{IconVariants::READ_DATA, "/ressource/icons/readdata.png"}},
+    {2, Icon{IconVariants::DISCONNECT, "/ressource/icons/disconnect.png"}},
+    {3, Icon{IconVariants::BAR, "/ressource/icons/bar.png"}},
+    {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},
+    {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}};
 
 enum class DataSource
 {
@@ -53,7 +53,7 @@ enum class DataSource
 
 namespace PDTypes
 {
-const uint16_t noDragSourceTypes = 4;
+static constexpr uint16_t noDragSourceTypes = 4;
 enum class DragSource
 {
     SSHRAW,
@@ -77,30 +77,23 @@ struct DataInPlot
 
 struct DragDrop
 {
-    std::string SourceType;
-    uint16_t DataIndex;
-    DragDrop(std::string cSourceType = "", uint16_t cDataIndex = 0) : SourceType(cSourceType), DataIndex(cDataIndex) {}
+    std::string SourceType{};
+    uint16_t DataIndex{};
 };
 
 struct BarHover
 {
-    int16_t iHighL;
-    bool inBoundY;
-    bool isHovered;
-    BarHover(int16_t ciHighl = -1) : iHighL(ciHighl) {}
+    int16_t iHighL{-1};
+    bool inBoundY{false};
+    bool isHovered{false};
 };
 
 struct MaxValues
 {
-    int32_t xmax;
-    int32_t xmin;
-    float ymax;
-    float ymin;
-    MaxValues()
-        : xmin(std::numeric_limits<int32_t>::max()), xmax(std::numeric_limits<int32_t>::min()),
-          ymin(std::numeric_limits<float>::max()), ymax(std::numeric_limits<float>::min())
-    {
-    }
+    int32_t xmax{std::numeric_limits<int32_t>::min()};
+    int32_t xmin{std::numeric_limits<int32_t>::max()};
+    float ymax{std::numeric_limits<float>::min()};
+    float ymin{std::numeric_limits<float>::max()};
 };
 
 // Überall DataType statt int16_t oder whatever verwenden
@@ -131,6 +124,7 @@ struct HelperData
 
     HelperData(uint16_t pChunkSize)
     {
+        // Use init list and init all members! (Header is missing)
         TargetChunkSize = pChunkSize;
         Progress = 0;
         HeaderEnd = 1;
@@ -151,11 +145,10 @@ struct BasicMetrics
         float Value;
         KeyPoint(float r) : Timestamp(0), Value(r) {}
     };
-    KeyPoint Max;
-    KeyPoint Min;
-    double sum;
-    float avg;
-    BasicMetrics() : Min(std::numeric_limits<float>::max()), Max(std::numeric_limits<float>::min()) {}
+    KeyPoint Max{std::numeric_limits<float>::min()};
+    KeyPoint Min{std::numeric_limits<float>::max()};
+    double sum{};
+    float avg{};
 };
 
 struct IsInPlot
@@ -172,7 +165,7 @@ struct Entries
     BasicMetrics AN;
     Entries()
     {
-        Values.clear();
+        Values.clear(); // <- This is completely useless, Values is not even initialized here.
         AN = BasicMetrics();
     }
 };
@@ -185,20 +178,20 @@ struct EnergyStruct
         std::vector<int32_t> Times;
         DailyData()
         {
-            Es.clear();
-            Times.clear();
+            Es.clear();    // useless, instead initialize members
+            Times.clear(); // useless, instead initialize members
         }
     };
     struct VRMData
     {
-        int16_t a;
-        VRMData() { a = 0; }
+        int16_t a{0};
     };
     DailyData Daily;
     VRMData VRM;
 
     EnergyStruct()
     {
+        // use initializer list or member inits instead
         Daily = DailyData();
         VRM = VRMData();
     }
@@ -228,6 +221,8 @@ struct TimeStruct
 {
     std::string msString;
     int64_t ms;
+
+    // I don't like ctor for struct with all public members. Use init lists instead
     TimeStruct(std::string cMsString, int64_t cMs) : msString{cMsString}, ms{cMs} {}
 };
 } // namespace TimingTypes
@@ -256,14 +251,14 @@ enum class ComparisonType
     SM
 };
 
-std::unordered_map<ConnectionState, uint16_t> ProgressLookup = {{ConnectionState::OFFLINE, 0},
-                                                                {ConnectionState::SESSION, 1},
-                                                                {ConnectionState::CONNECTED, 2},
-                                                                {ConnectionState::AUTHENTICATED, 3},
-                                                                {ConnectionState::CHANNEL, 4},
-                                                                {ConnectionState::CHANNEL_SESSION, 5},
-                                                                {ConnectionState::EXECUTED_CMD, 6},
-                                                                {ConnectionState::READ_RESULT, 7}};
+const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
+                                                                   {ConnectionState::SESSION, 1},
+                                                                   {ConnectionState::CONNECTED, 2},
+                                                                   {ConnectionState::AUTHENTICATED, 3},
+                                                                   {ConnectionState::CHANNEL, 4},
+                                                                   {ConnectionState::CHANNEL_SESSION, 5},
+                                                                   {ConnectionState::EXECUTED_CMD, 6},
+                                                                   {ConnectionState::READ_RESULT, 7}};
 } // namespace SSHTypes
 
 namespace ModbusTypes
@@ -278,12 +273,12 @@ enum ConnectionState
     READ_RESULT
 };
 
-std::unordered_map<ConnectionState, uint16_t> ProgressLookup = {{ConnectionState::OFFLINE, 0},
-                                                                {ConnectionState::SESSION, 1},
-                                                                {ConnectionState::CONNECTED, 2},
-                                                                {ConnectionState::AUTHENTICATED, 3},
-                                                                {ConnectionState::EXECUTED_CMD, 4},
-                                                                {ConnectionState::READ_RESULT, 5}};
+const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
+                                                                   {ConnectionState::SESSION, 1},
+                                                                   {ConnectionState::CONNECTED, 2},
+                                                                   {ConnectionState::AUTHENTICATED, 3},
+                                                                   {ConnectionState::EXECUTED_CMD, 4},
+                                                                   {ConnectionState::READ_RESULT, 5}};
 
 enum class Devices
 {

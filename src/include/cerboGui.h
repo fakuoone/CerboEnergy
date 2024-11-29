@@ -39,7 +39,6 @@ bool LoadTextureFromFile(ID3D11Device* renderDeviceFromMain,
 class App
 {
   private:
-    bool isInitialized;
     uint16_t windowCount;
     ImGuiID dockSpace;
     std::unique_ptr<CerboPlots::Visualizer> VisualizerInstance;
@@ -54,7 +53,7 @@ class App
         ImGui::SetNextWindowDockID(dockSpace);
     }
 
-    bool AddAppControlButton(std::string name, bool enable, GUITypes::IconData icon, bool isLastInRow)
+    bool AddAppControlButton(const std::string& name, bool enable, GUITypes::IconData icon, bool isLastInRow)
     {
         if (AddButton(name, enable, icon, 1.0f))
         {
@@ -67,7 +66,7 @@ class App
         return false;
     }
 
-    bool AddButton(std::string name, bool enable, GUITypes::IconData icon, float sizeScaling)
+    bool AddButton(const std::string& name, bool enable, GUITypes::IconData icon, float sizeScaling)
     {
         ImGui::BeginDisabled(!enable);
         if (ImGui::ImageButton(name.c_str(),
@@ -242,14 +241,13 @@ class App
     void AddDataControls()
     {
         const std::vector<std::string> header = SSHDataHandler::GetHeader();
-        const uint16_t headerSize = header.size();
-        GUITypes::IconData barIcon = IconMap.at(GUITypes::IconVariants::BAR);
-        GUITypes::IconData lineIcon = IconMap.at(GUITypes::IconVariants::LINE);
+        const GUITypes::IconData barIcon = IconMap.at(GUITypes::IconVariants::BAR);
+        const GUITypes::IconData lineIcon = IconMap.at(GUITypes::IconVariants::LINE);
 
         if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            uint16_t dataCategories = SSHDataHandler::GetDataCategories();
-            uint16_t countSubPlots = VisualizerInstance->GetSubPlotCount();
+            const uint16_t dataCategories = SSHDataHandler::GetDataCategories();
+            const uint16_t countSubPlots = VisualizerInstance->GetSubPlotCount();
             std::array<bool, PDTypes::noDragSourceTypes> plotInSubPlotArray;
             std::array<bool, PDTypes::noDragSourceTypes> plotInSubPlotArrayPrev;
             for (uint16_t i = 0; i < dataCategories; i++)
@@ -325,13 +323,12 @@ class App
         }
     }
 
-    void RemovePlotsFromSubplot(std::array<bool, PDTypes::noDragSourceTypes> arrayNow,
-                                std::array<bool, PDTypes::noDragSourceTypes> arrayLastFrame,
+    void RemovePlotsFromSubplot(const std::array<bool, PDTypes::noDragSourceTypes>& arrayNow,
+                                const std::array<bool, PDTypes::noDragSourceTypes>& arrayLastFrame,
                                 uint16_t subPlotIndex,
                                 uint16_t plotIndex,
                                 uint16_t dataIndex)
     {
-        std::array<bool, PDTypes::noDragSourceTypes> removedPlotsArray;
         for (uint16_t i = 0; i < PDTypes::noDragSourceTypes; i++)
         {
             if (!arrayNow[i] && arrayLastFrame[i])
@@ -389,7 +386,6 @@ class App
     App(std::unique_ptr<CerboPlots::Visualizer> cVisualizerPtr, ID3D11Device* cRenderDeviceFromMain)
         : VisualizerInstance(std::move(cVisualizerPtr)), renderDeviceFromMain{cRenderDeviceFromMain}
     {
-        isInitialized = false;
         windowCount = 0;
         dockSpace = 0;
 
