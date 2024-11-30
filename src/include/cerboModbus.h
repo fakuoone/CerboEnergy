@@ -40,11 +40,8 @@ class Register
     {
         if (conn != nullptr)
         {
-            if (Timing::GetTimeNow().ms <= Result.LastRefresh + TimeDeltaBetweenReads)
-            {
-                return;
-            }
-            if (!ToBeRead)
+            TimingTypes::TimeStruct now = Timing::GetTimeNow();
+            if (!ToBeRead || (now.ms < (Result.LastRefresh + TimeDeltaBetweenReads)))
             {
                 return;
             }
@@ -57,7 +54,7 @@ class Register
             else
             {
                 Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
-                Result.LastRefresh = Timing::GetTimeNow().ms;
+                Result.LastRefresh = now.ms;
             }
             if (ToBeSaved)
             {
@@ -142,16 +139,16 @@ class CerboModbus
     static void AddAllUnits()
     {
         ModbusUnit System{100, "System"};
-        System.AddRegister(Register{"Leistung String 1", 3724, DataUnits::WATT, 1, 5000});
-        System.AddRegister(Register{"Leistung String 2", 3725, DataUnits::WATT, 1, 5000});
-        System.AddRegister(Register{"Verbrauch L1", 817, DataUnits::WATT, 1, 5000});
-        System.AddRegister(Register{"Verbrauch L2", 818, DataUnits::WATT, 1, 5000});
-        System.AddRegister(Register{"Verbrauch L3", 819, DataUnits::WATT, 1, 5000});
+        System.AddRegister(Register{"Leistung String 1", 3724, DataUnits::WATT, 1, 2500});
+        System.AddRegister(Register{"Leistung String 2", 3725, DataUnits::WATT, 1, 2500});
+        System.AddRegister(Register{"Verbrauch L1", 817, DataUnits::WATT, 1, 2500});
+        System.AddRegister(Register{"Verbrauch L2", 818, DataUnits::WATT, 1, 2500});
+        System.AddRegister(Register{"Verbrauch L3", 819, DataUnits::WATT, 1, 2500});
         AddUnit(Devices::SYSTEM, System);
 
         ModbusUnit Battery{225, "Akku"};
-        Battery.AddRegister(Register{"Spannung", 259, DataUnits::VOLT, 100, 5000});
-        Battery.AddRegister(Register{"Strom", 261, DataUnits::AMPERE, 10, 5000});
+        Battery.AddRegister(Register{"Spannung", 259, DataUnits::VOLT, 100, 2500});
+        Battery.AddRegister(Register{"Strom", 261, DataUnits::AMPERE, 10, 2500});
         Battery.AddRegister(Register{"SOC", 266, DataUnits::PERCENT, 10, 20000});
         AddUnit(Devices::BATTERY, Battery);
 

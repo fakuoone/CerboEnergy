@@ -308,8 +308,8 @@ const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT
 
 struct RegisterResult
 {
-    int64_t LastRefresh;
-    double Value;
+    int64_t LastRefresh{0}; // Without this, things break because of uninitialized value??
+    double Value{0};
 };
 
 template <typename T, size_t Size> class CircularBuffer
