@@ -55,6 +55,7 @@ class Register
             {
                 Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
                 Result.LastRefresh = now.ms;
+                Result.LastRefreshS = now.ms / 1000;
             }
             if (ToBeSaved)
             {

@@ -358,6 +358,7 @@ class Visualizer
             for (int32_t i = 1; i < size; i++)
             {
                 drawList->AddLine(ImVec2{xValues[i - 1], yValues[i - 1]}, ImVec2{xValues[i], yValues[i]}, color);
+                drawList->AddRectFilled(ImVec2{xValues[i - 1], 500}, ImVec2{xValues[i], 400}, color);
             }
         }
     }
@@ -419,6 +420,7 @@ class Visualizer
         ImVec2 plotSize = ImGui::GetContentRegionAvail();
         if (ImPlot::BeginPlot("Echtzeitdaten", plotSize))
         {
+            PrepareUnitDataPlot();
             PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
             PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
             PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
@@ -430,7 +432,7 @@ class Visualizer
     {
 
         const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
-        PrepareUnitDataPlot();
+
         for (const auto& [lId, lRegister] : targetRegisters)
         {
             const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
@@ -441,7 +443,23 @@ class Visualizer
         }
     }
 
-    void PrepareUnitDataPlot() const { return; }
+    void PrepareUnitDataPlot() const
+    {
+        PDTypes::MaxValues plotExtremes;
+        plotExtremes.xmax = Timing::GetTimeNow().ms / 1000;
+        plotExtremes.xmin = plotExtremes.xmax - 1000;
+        plotExtremes.ymax = 1000;
+        plotExtremes.ymin = -500;
+
+        ImPlot::SetupAxes(
+            "Zeit", "kWh", ImPlotAxisFlags_NoGridLines, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoGridLines);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+        ImPlot::SetupAxisLimits(ImAxis_Y1, plotExtremes.ymin, plotExtremes.ymax, ImPlotCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
+        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
+        ;
+    }
 
     void PrepareDropTarget(const PDTypes::DragDrop& DragSource) { DropTarget = DragSource; }
 

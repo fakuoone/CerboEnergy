@@ -309,6 +309,7 @@ const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT
 struct RegisterResult
 {
     int64_t LastRefresh{0}; // Without this, things break because of uninitialized value??
+    int32_t LastRefreshS{0};
     double Value{0};
 };
 
