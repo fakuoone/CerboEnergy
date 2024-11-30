@@ -7,6 +7,7 @@
 #include "implot.h"
 #include "implot_internal.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -187,6 +188,7 @@ class Visualizer
         }
     }
 
+    // Needs refactor
     void PlotProperBars(std::string plotName,
                         const std::vector<int32_t>& xdata,
                         const std::vector<float>& ydata,
@@ -201,22 +203,14 @@ class Visualizer
             ImU32 colorHighL = ImGui::GetColorU32(ImVec4(0.156f, 0.261f, 0.651f, 1.000f));
             ImU32 colorShade = ImGui::GetColorU32(ImVec4(0.000f, 0.000f, 0.000f, 0.300f));
 
-            const int16_t noShadingBars = 10;
+            const int32_t noShadingBars = 10;
             ImU32 color = colorBasic;
             float leftX, rightX;
 
-            // I have no idea what count it's passed in from outside (which is a horrible design decision) but why is it
-            // "i < count - 1" instead of the usual i < count?
-
-            // Also it is never checked, that xdata and ydata are actually big enough.
             assert(count - 1 >= xdata.size());
             assert(count - 1 >= ydata.size());
-            // Use assert(bool) to check pre-conditions of function that must be satisfied, but that you don't want to
-            // explicitly handle as valid error cases. Assert will (safely) crash the program in a debug build, so you
-            // can find logic errors in your code (violated precondition), but the assert will not be evaluated in a
-            // release build.
 
-            for (int16_t i = 0; i < count - 1; ++i)
+            for (int32_t i = 0; i < count - 1; ++i)
             {
                 hoverData.inBoundY&& hoverData.iHighL == i ? color = colorHighL : color = colorBasic;
                 leftX = xdata[i];
@@ -249,9 +243,6 @@ class Visualizer
     }
 
     PDTypes::BarHover
-    // Why is dataCount passed additionally to the vectors which know their sizes?
-    // Same thing here, your function assumes, that x and y vectors are big enough. Check this, or remove the additional
-    // count argument
     FindHoveredBar(const std::vector<int32_t>& xValues, const std::vector<float>& yValues, int16_t dataCount)
     {
         PDTypes::BarHover returnData{};
@@ -348,11 +339,37 @@ class Visualizer
         ImPlot::TagX(xTag, ImVec4(1, 0, 0, 1), buffer);
     }
 
+    // Can this function be used with vectors aswell?
+    template <size_t Sx, size_t Sy>
+    void PlotProperLineGraph(const std::string& plotName,
+                             const std::array<size_t, Sx>& xValues,
+                             const std::array<double, Sy>& yValues) const
+    {
+        ImDrawList* drawList = ImPlot::GetPlotDrawList();
+        const int32_t size = std::min(Sx, Sy);
+        ImU32 color = ImGui::GetColorU32(ImVec4{1, 1, 1, 1});
+        if (size == 0)
+        {
+            return;
+        }
+        if (ImPlot::BeginItem(plotName.c_str()))
+        {
+            for (int32_t i = 1; i < size; i++)
+            {
+                drawList->AddLine(ImVec2{xValues[i - 1], yValues[i - 1]}, ImVec2{xValues[i], yValues[i]}, color);
+            }
+        }
+    }
+
   public:
     // Return value is never used. Think about if you actually need it and how you would treat the "false" case.
     // Otherwise remove
-    bool GetData(const std::string& rawData)
+    void GetData(const std::string& rawData)
     {
+        if (!SSHDataHandler::ConversionPending())
+        {
+            return;
+        }
         const bool completed = SSHDataHandler::FormatData(ED, rawData);
         if (completed)
         {
@@ -363,7 +380,6 @@ class Visualizer
             SSHDataHandler::ComputeAnalytics(ED);
             AddPlot(0, xdata, ydata, size, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1, inPlotInfo);
         }
-        return completed;
     }
 
     void PlotGraph()
@@ -391,6 +407,39 @@ class Visualizer
             ImPlot::EndPlot();
         }
     }
+
+    void PlotRealTimeData() const
+    {
+        if (!CerboModbus::GetUnitsAreCreated())
+        {
+            return;
+        }
+        ImVec2 plotSize = ImGui::GetContentRegionAvail();
+        if (ImPlot::BeginPlot("Echtzeitdaten", plotSize))
+        {
+            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+            ImPlot::EndPlot();
+        }
+    }
+
+    void PlotUnitData(const ModbusUnit& targetUnit) const
+    {
+
+        const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
+        PrepareUnitDataPlot();
+        for (const auto& [lId, lRegister] : targetRegisters)
+        {
+            const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
+            const CircularBuffer<double, CIRC_BUFFER_SIZE>& valuesBuffer = lRegister.GetRTValues();
+            std::array<size_t, CIRC_BUFFER_SIZE> times = timesBuffer.GetData();
+            std::array<double, CIRC_BUFFER_SIZE> values = valuesBuffer.GetData();
+            PlotProperLineGraph(lRegister.Name, times, values);
+        }
+    }
+
+    void PrepareUnitDataPlot() const { return; }
 
     void PrepareDropTarget(const PDTypes::DragDrop& DragSource) { DropTarget = DragSource; }
 
@@ -433,13 +482,13 @@ class Visualizer
         ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo.InPlot = false;
     }
 
-    bool CheckPlotInSubplot(const uint16_t subPlotIndex, const uint16_t dataIndex, PDTypes::DragSource dataType)
+    bool CheckPlotInSubplot(const uint16_t subPlotIndex, const uint16_t dataIndex, PDTypes::DragSource dataType) const
     {
         PDTypes::IsInPlot toCheck;
         switch (dataType)
         {
         case PDTypes::DragSource::SSHRAW:
-            toCheck = ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo;
+            toCheck = ED.Daily.Es.at(SSHDataHandler::GetPlotKey(dataIndex)).PlotInfo;
             if (toCheck.SubPlotIndex == subPlotIndex && toCheck.InPlot)
             {
                 return true;

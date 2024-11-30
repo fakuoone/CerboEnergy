@@ -7,8 +7,6 @@
 #include "cerboLogger.h"
 #include "dataTypes.h"
 
-#define CIRC_BUFFER_SIZE 5
-
 using namespace ModbusTypes;
 class Register
 {
@@ -80,6 +78,9 @@ class Register
     }
 
     const RegisterResult GetResult() const { return Result; }
+
+    const CircularBuffer<double, CIRC_BUFFER_SIZE>& GetRTValues() const { return ValueStorage; }
+    const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& GetRTTimes() const { return TimeStorage; }
 };
 
 class ModbusUnit

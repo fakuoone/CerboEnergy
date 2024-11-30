@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+#define CIRC_BUFFER_SIZE 1000
+
 namespace GUITypes
 {
 enum class IconVariants
@@ -297,6 +299,13 @@ enum class DataUnits
     PERCENT
 };
 
+const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT, "W"},
+                                                                {DataUnits::KILOWATT, "kW"},
+                                                                {DataUnits::DEGREE_C, "°C"},
+                                                                {DataUnits::VOLT, "V"},
+                                                                {DataUnits::AMPERE, "A"},
+                                                                {DataUnits::PERCENT, "%%"}};
+
 struct RegisterResult
 {
     int64_t LastRefresh;
@@ -320,5 +329,9 @@ template <typename T, size_t Size> class CircularBuffer
             Head = 0;
         }
     }
+
+    const std::array<T, Size>& GetData() const { return Data; }
+
+    size_t GetSize() { return Data.max_size(); }
 };
 } // namespace ModbusTypes

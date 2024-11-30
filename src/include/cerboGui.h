@@ -16,6 +16,7 @@
 
 #include <array>
 #include <d3d11.h>
+#include <format>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -240,25 +241,29 @@ class App
 
     void AddRealtimeData()
     {
-        if (CerboModbus::GetUnitsAreCreated())
+        if (!CerboModbus::GetUnitsAreCreated())
         {
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+            return;
         }
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
     }
 
     void AddRealTimeUnitData(const ModbusUnit& targetUnit)
     {
         const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
         ImGui::Text(targetUnit.name.c_str());
-        ImGui::SameLine();
         for (const auto& [lId, lRegister] : targetRegisters)
         {
             ModbusTypes::RegisterResult lResult = lRegister.GetResult();
-            std::string text = lRegister.Name + ": " + std::to_string(lResult.Value);
-            ImGui::Text(text.c_str());
+            std::string registerText = std::format(
+                "{}: {} {}", lRegister.Name, lResult.Value / lRegister.Divisor, DataUnitLookup.at(lRegister.Unit));
+            ImGui::Text(registerText.c_str());
         }
+        const ImVec2 spacing =
+            ImVec2{ImGui::GetCursorPos().x, ImGui::GetCursorPos().y + 2 * ImGui::GetStyle().ItemSpacing.y};
+        ImGui::SetCursorPos(spacing);
     }
 
     void AddDataControls()
@@ -395,6 +400,7 @@ class App
         const uint16_t iconCount = GUITypes::IconLookUp.size();
         for (uint16_t i = 0; i < iconCount; i++)
         {
+            // Shouldnt be a relative path, needs to be user config (or hard-baked into the code)
             std::string iconPath = "../";
             GUITypes::Icon icon = GUITypes::IconLookUp.at(i);
             IconMap.emplace(icon.IconType, nullptr);
@@ -424,19 +430,14 @@ class App
         BeginWindow("Steuerung");
         CreateAppControls();
 
-        if (SSHDataHandler::ConversionPending())
-        {
-            VisualizerInstance->GetData(CerboSSH::GetRawString());
-        }
+        VisualizerInstance->GetData(CerboSSH::GetRawString());
 
-        if (SSHDataHandler::DataAvailable())
-        {
-            BeginWindow("Graph");
-            VisualizerInstance->PlotGraph();
-        }
+        BeginWindow("Graph");
+        VisualizerInstance->PlotGraph();
 
         BeginWindow("Echtzeitdaten");
         AddRealtimeData();
+        VisualizerInstance->PlotRealTimeData();
 
         BeginWindow("Datenauswahl");
         AddDataControls();
