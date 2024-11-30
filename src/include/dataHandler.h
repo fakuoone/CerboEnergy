@@ -58,7 +58,7 @@ class SSHDataHandler
         CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS);
     }
 
-    static bool FormatData(PDTypes::EnergyStruct& ED, const std::string& rawData)
+    static void FormatData(PDTypes::EnergyStruct& ED, const std::string& rawData)
     {
         using namespace std; // this is lazy
         vector<float> emptyVector{};
@@ -76,7 +76,9 @@ class SSHDataHandler
         {
             uint64_t NewRowEnd = rawData.find("\n", ++CD.Progress);
             if (NewRowEnd == string::npos)
+            {
                 NewRowEnd = CD.DataSize;
+            }
 
             string temp = rawData.substr(CD.Progress, NewRowEnd - CD.Progress);
             stringstream ss(temp);
@@ -87,7 +89,7 @@ class SSHDataHandler
 
             while (getline(ss, temp, ','))
             {
-                if (i == 0) // Äquivalent zu if i == 0, da der erste Eintrag timestamp sein MUSS
+                if (i == 0)
                 {
                     try
                     {
@@ -99,7 +101,7 @@ class SSHDataHandler
                         string errorText = "Can't convert timestamp to integer: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
-                        return false;
+                        return;
                     }
                     ED.Daily.Times.push_back(tempTimestamp);
                 }
@@ -114,7 +116,7 @@ class SSHDataHandler
                         string errorText = "Can't convert to float: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
-                        return false;
+                        return;
                     }
                     ED.Daily.Es[KeyLookup[i - 1]].Values.push_back(tempData);
                 }
@@ -126,7 +128,9 @@ class SSHDataHandler
             CD.AvgRowSize = (CD.Progress - CD.HeaderEnd) / CD.RowsConverted;
 
             if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize)
+            {
                 KeepConverting = false;
+            }
 
             if (CD.Progress == CD.DataSize)
             {
@@ -137,8 +141,6 @@ class SSHDataHandler
         }
         string logText = "Parsed " + to_string(CD.Progress - PreviousProgress) + " bytes of data.";
         CerboLog::AddEntry(logText, LogTypes::Categories::SUCCESS);
-
-        return CD.Completed;
     }
 
     static void ResetSSHData() { CD = PDTypes::HelperData{200}; }
@@ -166,15 +168,9 @@ class SSHDataHandler
 
     static bool DataAvailable() { return CD.Completed; }
 
-    static float GetConversionProgress()
-    {
-        const float progress = CD.DataSize != 0 ? (float)CD.Progress / (float)CD.DataSize : 0;
-        if (progress > 0)
-        { // dafuq is this?
-            int16_t a = 0;
-        }
-        return progress;
-    }
+    static bool ReadyForConversion() { return CD.Progress == 0; }
+
+    static float GetConversionProgress() { return CD.DataSize != 0 ? (float)CD.Progress / (float)CD.DataSize : 0; }
 
     static std::string GetPlotKey(uint16_t iBar) { return KeyLookup[iBar]; }
 

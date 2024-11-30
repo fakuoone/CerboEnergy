@@ -18,7 +18,7 @@ class Register
     ModbusTypes::CircularBuffer<double, CIRC_BUFFER_SIZE> ValueStorage;
     ModbusTypes::CircularBuffer<size_t, CIRC_BUFFER_SIZE> TimeStorage;
 
-    uint16_t registerBuffer[100];
+    uint16_t regBuffer;
     std::string logMessage;
 
   public:
@@ -48,7 +48,7 @@ class Register
             {
                 return;
             }
-            int64_t rc = modbus_read_registers(conn, Address, 1, registerBuffer);
+            int64_t rc = modbus_read_registers(conn, Address, 1, &regBuffer);
             if (rc == -1)
             {
                 logMessage = "Can't read registers: " + std::string{modbus_strerror(errno)};
@@ -56,11 +56,9 @@ class Register
             }
             else
             {
-                Result.Value = registerBuffer[0];
+                Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
                 Result.LastRefresh = Timing::GetTimeNow().ms;
             }
-            /*             logMessage = "Read data from: " + std::to_string(Address) + ": " +
-               std::to_string(Result.Value); CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS); */
             if (ToBeSaved)
             {
                 SafeToBuffer();

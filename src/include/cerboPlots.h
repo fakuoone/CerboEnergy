@@ -142,6 +142,7 @@ class Visualizer
         case PDTypes::PlotTypes::BARS:
             PlotProperBars(
                 plotEntry.Info.Name, plotEntry.SourceX, plotEntry.SourceY, plotEntry.Info.Size, plotEntry.Info.Metrics);
+
             break;
         case PDTypes::PlotTypes::LINE:
             break;
@@ -207,10 +208,10 @@ class Visualizer
             ImU32 color = colorBasic;
             float leftX, rightX;
 
-            assert(count - 1 >= xdata.size());
-            assert(count - 1 >= ydata.size());
+            assert(count >= xdata.size());
+            assert(count >= ydata.size());
 
-            for (int32_t i = 0; i < count - 1; ++i)
+            for (int32_t i = 0; i < count; ++i)
             {
                 hoverData.inBoundY&& hoverData.iHighL == i ? color = colorHighL : color = colorBasic;
                 leftX = xdata[i];
@@ -362,23 +363,24 @@ class Visualizer
     }
 
   public:
-    // Return value is never used. Think about if you actually need it and how you would treat the "false" case.
-    // Otherwise remove
     void GetData(const std::string& rawData)
     {
-        if (!SSHDataHandler::ConversionPending())
+        if (rawData == "")
         {
             return;
         }
-        const bool completed = SSHDataHandler::FormatData(ED, rawData);
-        if (completed)
+        if (SSHDataHandler::ConversionPending() || SSHDataHandler::ReadyForConversion())
         {
-            const std::vector<int32_t>& xdata = ED.Daily.Times;
-            const std::vector<float>& ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
-            PDTypes::IsInPlot& inPlotInfo = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].PlotInfo;
-            const int16_t& size = ED.Daily.Times.size();
-            SSHDataHandler::ComputeAnalytics(ED);
-            AddPlot(0, xdata, ydata, size, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1, inPlotInfo);
+            SSHDataHandler::FormatData(ED, rawData);
+            if (SSHDataHandler::DataAvailable())
+            {
+                const std::vector<int32_t>& xdata = ED.Daily.Times;
+                const std::vector<float>& ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
+                PDTypes::IsInPlot& inPlotInfo = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].PlotInfo;
+                const int16_t& size = ED.Daily.Times.size();
+                SSHDataHandler::ComputeAnalytics(ED);
+                AddPlot(0, xdata, ydata, size, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1, inPlotInfo);
+            }
         }
     }
 

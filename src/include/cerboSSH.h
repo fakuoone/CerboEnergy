@@ -343,7 +343,7 @@ class CerboSSH
         return SSH_OK;
     }
 
-    static std::string GetRawString() { return commandResult; }
+    static const std::string& GetRawString() { return commandResult; }
 
-    static State GetConnectionState() { return connectionState; }
+    static const State GetConnectionState() { return connectionState; }
 };
