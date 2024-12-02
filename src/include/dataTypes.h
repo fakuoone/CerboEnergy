@@ -318,21 +318,56 @@ template <typename T, size_t Size> class CircularBuffer
   private:
     std::array<T, Size> Data;
     size_t Head{0};
+    size_t Tail{0};
     bool Full{false};
+    struct Iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = int;
+        using pointer = int*;   // or also value_type*
+        using reference = int&; // or also value_type&
+        Iterator(pointer ptr) : m_ptr{ptr} {}
+        reference operator*() const { return *m_ptr; }
+        pointer operator->() { return m_ptr; }
+        Iterator operator++(int)
+        {
+            Iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        friend bool operator==(const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; };
+        friend bool operator!=(const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; };
+
+      private:
+        pointer m_ptr;
+    };
+
+    Iterator begin() { return Iterator{&Data[Tail]}; }
+    Iterator end() { return Iterator{&Data[Head]}; }
 
   public:
     void AppendData(const T& _data)
     {
         Data[Head++] = _data;
-        if (Head == Data.max_size())
+        if (Full)
+        {
+            Tail = Head--;
+        }
+        if (Head == Size)
         {
             Full = true;
             Head = 0;
+            Tail = Size;
         }
     }
 
     const std::array<T, Size>& GetData() const { return Data; }
 
-    size_t GetSize() { return Data.max_size(); }
+    const size_t GetSize() { return Data.max_size(); }
+
+    const size_t GetHead() const { return Head; }
+
+    const size_t GetTail() const { return Tail; }
 };
 } // namespace ModbusTypes

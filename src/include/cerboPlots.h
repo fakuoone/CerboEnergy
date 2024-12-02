@@ -344,10 +344,12 @@ class Visualizer
     template <size_t Sx, size_t Sy>
     void PlotProperLineGraph(const std::string& plotName,
                              const std::array<size_t, Sx>& xValues,
-                             const std::array<double, Sy>& yValues) const
+                             const std::array<double, Sy>& yValues,
+                             size_t start,
+                             size_t end) const
     {
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
-        const int32_t size = std::min(Sx, Sy);
+        const int32_t size = std::min(xValues.size(), yValues.size());
         ImU32 color = ImGui::GetColorU32(ImVec4{1, 1, 1, 1});
         if (size == 0)
         {
@@ -355,12 +357,26 @@ class Visualizer
         }
         if (ImPlot::BeginItem(plotName.c_str()))
         {
-            for (int32_t i = 1; i < size; i++)
+            size_t i{start};
+            while (i != end)
             {
-                drawList->AddLine(ImVec2{xValues[i - 1], yValues[i - 1]}, ImVec2{xValues[i], yValues[i]}, color);
                 drawList->AddRectFilled(ImVec2{xValues[i - 1], 500}, ImVec2{xValues[i], 400}, color);
+                drawList->AddLine(ImVec2{xValues[i - 1], yValues[i - 1]}, ImVec2{xValues[i], yValues[i]}, color);
+                i++;
+                if (i == size)
+                {
+                    i = 0;
+                }
             }
         }
+    }
+
+    template <size_t Sx, size_t Sy>
+    void PlotLineFromCircularBuffer(const std::string& plotName,
+                                    const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer,
+                                    const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const
+    {
+        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead());
     }
 
   public:
@@ -437,9 +453,7 @@ class Visualizer
         {
             const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
             const CircularBuffer<double, CIRC_BUFFER_SIZE>& valuesBuffer = lRegister.GetRTValues();
-            std::array<size_t, CIRC_BUFFER_SIZE> times = timesBuffer.GetData();
-            std::array<double, CIRC_BUFFER_SIZE> values = valuesBuffer.GetData();
-            PlotProperLineGraph(lRegister.Name, times, values);
+            PlotLineFromCircularBuffer(lRegister.Name, timesBuffer, valuesBuffer);
         }
     }
 
