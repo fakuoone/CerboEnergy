@@ -1,15 +1,13 @@
 #pragma once
 
-#include <string>
-
-#include <modbus/modbus.h>
-
 #include "cerboLogger.h"
 #include "dataTypes.h"
 
+#include <modbus/modbus.h>
+#include <string>
+
 using namespace ModbusTypes;
-class Register
-{
+class Register {
   private:
     bool ToBeRead;
     bool ToBeSaved{true};
@@ -28,37 +26,29 @@ class Register
     const uint16_t Divisor;
 
     Register(std::string cName, uint16_t cAddr, DataUnits cUnit, uint16_t cDiv, int64_t cTDelta)
-        : Name{cName}, Address{cAddr}, Unit{cUnit}, Divisor{cDiv}, TimeDeltaBetweenReads{cTDelta}
-    {
+        : Name{cName}, Address{cAddr}, Unit{cUnit}, Divisor{cDiv}, TimeDeltaBetweenReads{cTDelta} {
         ToBeRead = true;
     };
     ~Register() {}
 
     void MarkRegisterToBeRead() { ToBeRead = true; }
 
-    void ReadRegister(modbus_t* conn)
-    {
-        if (conn != nullptr)
-        {
+    void ReadRegister(modbus_t* conn) {
+        if (conn != nullptr) {
             TimingTypes::TimeStruct now = Timing::GetTimeNow();
-            if (!ToBeRead || (now.ms < (Result.LastRefresh + TimeDeltaBetweenReads)))
-            {
+            if (!ToBeRead || (now.ms < (Result.LastRefresh + TimeDeltaBetweenReads))) {
                 return;
             }
             int64_t rc = modbus_read_registers(conn, Address, 1, &regBuffer);
-            if (rc == -1)
-            {
+            if (rc == -1) {
                 logMessage = "Can't read registers: " + std::string{modbus_strerror(errno)};
                 CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
-            }
-            else
-            {
+            } else {
                 Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
                 Result.LastRefresh = now.ms;
                 Result.LastRefreshS = now.ms / 1000;
             }
-            if (ToBeSaved)
-            {
+            if (ToBeSaved) {
                 SafeToBuffer();
             }
             return;
@@ -67,10 +57,9 @@ class Register
         CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
     }
 
-    void SafeToBuffer()
-    {
+    void SafeToBuffer() {
         ValueStorage.AppendData(Result.Value);
-        TimeStorage.AppendData(Result.LastRefresh);
+        TimeStorage.AppendData(Result.LastRefreshS);
     }
 
     const RegisterResult GetResult() const { return Result; }
@@ -79,8 +68,7 @@ class Register
     const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& GetRTTimes() const { return TimeStorage; }
 };
 
-class ModbusUnit
-{
+class ModbusUnit {
   private:
     std::map<uint16_t, Register> registers;
     std::string logMessage;
@@ -93,11 +81,9 @@ class ModbusUnit
 
     void AddRegister(Register registerToAdd) { registers.emplace(registerToAdd.Address, registerToAdd); }
 
-    void ReadRegisters(modbus_t* conn)
-    {
+    void ReadRegisters(modbus_t* conn) {
         modbus_set_slave(conn, id);
-        for (auto& [regId, reg] : registers)
-        {
+        for (auto& [regId, reg] : registers) {
             reg.ReadRegister(conn);
         }
     }
@@ -105,8 +91,7 @@ class ModbusUnit
     const std::map<uint16_t, Register>& GetRegisters() const { return registers; }
 };
 
-class CerboModbus
-{
+class CerboModbus {
     using State = ModbusTypes::ConnectionState;
 
   private:
@@ -123,11 +108,9 @@ class CerboModbus
     CerboModbus() {}
     ~CerboModbus() {}
 
-    static bool InitConnection()
-    {
+    static bool InitConnection() {
         connection = modbus_new_tcp(ipAdress.c_str(), port);
-        if (connection == nullptr)
-        {
+        if (connection == nullptr) {
             logMessage = "Creating socket failed.";
             CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
             return false;
@@ -137,8 +120,7 @@ class CerboModbus
         return true;
     }
 
-    static void AddAllUnits()
-    {
+    static void AddAllUnits() {
         ModbusUnit System{100, "System"};
         System.AddRegister(Register{"Leistung String 1", 3724, DataUnits::WATT, 1, 2500});
         System.AddRegister(Register{"Leistung String 2", 3725, DataUnits::WATT, 1, 2500});
@@ -162,17 +144,13 @@ class CerboModbus
     }
 
   public:
-    static void Connect()
-    {
+    static void Connect() {
         bool temp;
-        if (connection == nullptr)
-        {
+        if (connection == nullptr) {
             temp = InitConnection();
         }
-        if (temp)
-        {
-            if (modbus_connect(connection) == -1)
-            {
+        if (temp) {
+            if (modbus_connect(connection) == -1) {
                 logMessage = "Connection failed: " + std::string{modbus_strerror(errno)} +
                              "\nIf no error is printed, check if target device is resposive at: " + ipAdress + ":" +
                              std::to_string(port);
@@ -185,12 +163,9 @@ class CerboModbus
         }
     }
 
-    static void ReadAll()
-    {
-        if (connectionState >= ConnectionState::CONNECTED)
-        {
-            for (auto& [unitEnum, unit] : units)
-            {
+    static void ReadAll() {
+        if (connectionState >= ConnectionState::CONNECTED) {
+            for (auto& [unitEnum, unit] : units) {
                 unit.ReadRegisters(connection);
             }
         }
@@ -208,8 +183,7 @@ class CerboModbus
 
     static void ToggleReadingActive() { readingActive = !readingActive; }
 
-    static void Disconnect()
-    {
+    static void Disconnect() {
         modbus_close(connection);
         modbus_free(connection);
         connection = nullptr;

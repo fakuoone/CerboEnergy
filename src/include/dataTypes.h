@@ -12,26 +12,15 @@
 
 #define CIRC_BUFFER_SIZE 1000
 
-namespace GUITypes
-{
-enum class IconVariants
-{
-    CONNECT,
-    READ_DATA,
-    DISCONNECT,
-    BAR,
-    LINE,
-    PAUSE
-};
+namespace GUITypes {
+enum class IconVariants { CONNECT, READ_DATA, DISCONNECT, BAR, LINE, PAUSE };
 
-struct Icon
-{
+struct Icon {
     IconVariants IconType{};
     std::string RelPath{};
 };
 
-struct IconData
-{
+struct IconData {
     ID3D11ShaderResourceView* texturePtr{};
     int width{};
     int height{};
@@ -45,19 +34,12 @@ const std::unordered_map<uint16_t, Icon> IconLookUp{
     {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},
     {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}};
 
-enum class DataSource
-{
-    SSH,
-    API,
-    MODBUS
-};
+enum class DataSource { SSH, API, MODBUS };
 } // namespace GUITypes
 
-namespace PDTypes
-{
+namespace PDTypes {
 static constexpr uint16_t noDragSourceTypes = 4;
-enum class DragSource
-{
+enum class DragSource {
     SSHRAW,
     SSHCOMPUTED,
     API,
@@ -72,26 +54,22 @@ const std::map<DragSource, std::string> DragSourceMap = {{DragSource::SSHRAW, "S
                                                          {DragSource::API, "API"},
                                                          {DragSource::MODBUS, "MOD"}};
 
-struct DataInPlot
-{
+struct DataInPlot {
     std::unordered_map<DragSource, bool> map;
 };
 
-struct DragDrop
-{
+struct DragDrop {
     std::string SourceType{};
     uint16_t DataIndex{};
 };
 
-struct BarHover
-{
+struct BarHover {
     int16_t iHighL{-1};
     bool inBoundY{false};
     bool isHovered{false};
 };
 
-struct MaxValues
-{
+struct MaxValues {
     int32_t xmax{std::numeric_limits<int32_t>::min()};
     int32_t xmin{std::numeric_limits<int32_t>::max()};
     float ymax{std::numeric_limits<float>::min()};
@@ -99,20 +77,14 @@ struct MaxValues
 };
 
 // Überall DataType statt int16_t oder whatever verwenden
-enum class DataType
-{
+enum class DataType {
     LONG_INT,
     FLOAT,
 };
 
-enum class PlotTypes
-{
-    BARS,
-    LINE
-};
+enum class PlotTypes { BARS, LINE };
 
-struct HelperData
-{
+struct HelperData {
     uint16_t TargetChunkSize;
     uint16_t Progress;
     uint16_t HeaderEnd;
@@ -124,8 +96,7 @@ struct HelperData
     bool Completed;
     bool Error;
 
-    HelperData(uint16_t pChunkSize)
-    {
+    HelperData(uint16_t pChunkSize) {
         // Use init list and init all members! (Header is missing)
         TargetChunkSize = pChunkSize;
         Progress = 0;
@@ -139,10 +110,8 @@ struct HelperData
     }
 };
 
-struct BasicMetrics
-{
-    struct KeyPoint
-    {
+struct BasicMetrics {
+    struct KeyPoint {
         int32_t Timestamp;
         float Value;
         KeyPoint(float r) : Timestamp(0), Value(r) {}
@@ -153,46 +122,38 @@ struct BasicMetrics
     float avg{};
 };
 
-struct IsInPlot
-{
+struct IsInPlot {
     bool InPlot{false};
     uint16_t SubPlotIndex{0};
     uint16_t PlotIndex{0};
 };
 
-struct Entries
-{
+struct Entries {
     std::vector<float> Values;
     IsInPlot PlotInfo;
     BasicMetrics AN;
-    Entries()
-    {
+    Entries() {
         Values.clear(); // <- This is completely useless, Values is not even initialized here.
         AN = BasicMetrics();
     }
 };
 
-struct EnergyStruct
-{
-    struct DailyData
-    {
+struct EnergyStruct {
+    struct DailyData {
         std::unordered_map<std::string, Entries> Es;
         std::vector<int32_t> Times;
-        DailyData()
-        {
+        DailyData() {
             Es.clear();    // useless, instead initialize members
             Times.clear(); // useless, instead initialize members
         }
     };
-    struct VRMData
-    {
+    struct VRMData {
         int16_t a{0};
     };
     DailyData Daily;
     VRMData VRM;
 
-    EnergyStruct()
-    {
+    EnergyStruct() {
         // use initializer list or member inits instead
         Daily = DailyData();
         VRM = VRMData();
@@ -200,27 +161,18 @@ struct EnergyStruct
 };
 } // namespace PDTypes
 
-namespace LogTypes
-{
-enum class Categories
-{
-    SUCCESS,
-    FAILURE,
-    INFORMATION
-};
+namespace LogTypes {
+enum class Categories { SUCCESS, FAILURE, INFORMATION };
 
-struct Log
-{
+struct Log {
     std::string Timestamp{};
     std::string Message{};
     Categories Category{};
 };
 } // namespace LogTypes
 
-namespace TimingTypes
-{
-struct TimeStruct
-{
+namespace TimingTypes {
+struct TimeStruct {
     std::string msString;
     int64_t ms;
 
@@ -229,10 +181,8 @@ struct TimeStruct
 };
 } // namespace TimingTypes
 
-namespace SSHTypes
-{
-enum ConnectionState
-{
+namespace SSHTypes {
+enum ConnectionState {
     OFFLINE,
     SESSION,
     CONNECTED,
@@ -243,15 +193,7 @@ enum ConnectionState
     READ_RESULT
 };
 
-enum class ComparisonType
-{
-    GR,
-    GREQ,
-    EQ,
-    INEQ,
-    SMEQ,
-    SM
-};
+enum class ComparisonType { GR, GREQ, EQ, INEQ, SMEQ, SM };
 
 const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
                                                                    {ConnectionState::SESSION, 1},
@@ -263,17 +205,8 @@ const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionSt
                                                                    {ConnectionState::READ_RESULT, 7}};
 } // namespace SSHTypes
 
-namespace ModbusTypes
-{
-enum ConnectionState
-{
-    OFFLINE,
-    SESSION,
-    CONNECTED,
-    AUTHENTICATED,
-    EXECUTED_CMD,
-    READ_RESULT
-};
+namespace ModbusTypes {
+enum ConnectionState { OFFLINE, SESSION, CONNECTED, AUTHENTICATED, EXECUTED_CMD, READ_RESULT };
 
 const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
                                                                    {ConnectionState::SESSION, 1},
@@ -282,22 +215,9 @@ const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionSt
                                                                    {ConnectionState::EXECUTED_CMD, 4},
                                                                    {ConnectionState::READ_RESULT, 5}};
 
-enum class Devices
-{
-    SYSTEM,
-    BATTERY,
-    VEBUS
-};
+enum class Devices { SYSTEM, BATTERY, VEBUS };
 
-enum class DataUnits
-{
-    WATT,
-    KILOWATT,
-    DEGREE_C,
-    VOLT,
-    AMPERE,
-    PERCENT
-};
+enum class DataUnits { WATT, KILOWATT, DEGREE_C, VOLT, AMPERE, PERCENT };
 
 const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT, "W"},
                                                                 {DataUnits::KILOWATT, "kW"},
@@ -306,22 +226,19 @@ const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT
                                                                 {DataUnits::AMPERE, "A"},
                                                                 {DataUnits::PERCENT, "%%"}};
 
-struct RegisterResult
-{
+struct RegisterResult {
     int64_t LastRefresh{0}; // Without this, things break because of uninitialized value??
     int32_t LastRefreshS{0};
     double Value{0};
 };
 
-template <typename T, size_t Size> class CircularBuffer
-{
+template <typename T, size_t Size> class CircularBuffer {
   private:
     std::array<T, Size> Data;
     size_t Head{0};
     size_t Tail{0};
     bool Full{false};
-    struct Iterator
-    {
+    struct Iterator {
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = int;
@@ -330,8 +247,7 @@ template <typename T, size_t Size> class CircularBuffer
         Iterator(pointer ptr) : m_ptr{ptr} {}
         reference operator*() const { return *m_ptr; }
         pointer operator->() { return m_ptr; }
-        Iterator operator++(int)
-        {
+        Iterator operator++(int) {
             Iterator tmp = *this;
             ++(*this);
             return tmp;
@@ -347,15 +263,12 @@ template <typename T, size_t Size> class CircularBuffer
     Iterator end() { return Iterator{&Data[Head]}; }
 
   public:
-    void AppendData(const T& _data)
-    {
+    void AppendData(const T& _data) {
         Data[Head++] = _data;
-        if (Full)
-        {
+        if (Full) {
             Tail = Head--;
         }
-        if (Head == Size)
-        {
+        if (Head == Size) {
             Full = true;
             Head = 0;
             Tail = Size;

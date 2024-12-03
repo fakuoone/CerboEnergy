@@ -14,8 +14,7 @@
 
 #define PARSING_CHUNKSIZE 200
 
-class SSHDataHandler
-{
+class SSHDataHandler {
   private:
     inline static PDTypes::HelperData CD{200};
     inline static std::map<uint16_t, std::string> KeyLookup;
@@ -30,8 +29,7 @@ class SSHDataHandler
                                                                             {"wLoadpositive", "Lasten"}};
 
   public:
-    static void PHead(PDTypes::EnergyStruct& ED, const std::string& rawData)
-    {
+    static void PHead(PDTypes::EnergyStruct& ED, const std::string& rawData) {
         using namespace std;
         vector<float> emptyVector;
 
@@ -41,11 +39,9 @@ class SSHDataHandler
         stringstream ss(temp);
         uint16_t i = 0;
 
-        while (getline(ss, temp, ','))
-        {
+        while (getline(ss, temp, ',')) {
             PDTypes::Entries firstEntry = PDTypes::Entries();
-            if (temp != "timestamp")
-            {
+            if (temp != "timestamp") {
                 ED.Daily.Es.insert({temp, firstEntry});
                 KeyLookup.insert({i, temp});
                 i++;
@@ -58,13 +54,11 @@ class SSHDataHandler
         CerboLog::AddEntry(logMessage, LogTypes::Categories::SUCCESS);
     }
 
-    static void FormatData(PDTypes::EnergyStruct& ED, const std::string& rawData)
-    {
+    static void FormatData(PDTypes::EnergyStruct& ED, const std::string& rawData) {
         using namespace std; // this is lazy
         vector<float> emptyVector{};
 
-        if (CD.Progress < CD.HeaderEnd)
-        {
+        if (CD.Progress < CD.HeaderEnd) {
             PHead(ED, rawData);
         }
 
@@ -72,11 +66,9 @@ class SSHDataHandler
         const uint16_t PreviousProgress = CD.Progress;
         bool KeepConverting = CD.Progress != CD.DataSize;
 
-        while (KeepConverting)
-        {
+        while (KeepConverting) {
             uint64_t NewRowEnd = rawData.find("\n", ++CD.Progress);
-            if (NewRowEnd == string::npos)
-            {
+            if (NewRowEnd == string::npos) {
                 NewRowEnd = CD.DataSize;
             }
 
@@ -87,32 +79,22 @@ class SSHDataHandler
             uint32_t tempTimestamp = 0;
             uint64_t veryLong = 0;
 
-            while (getline(ss, temp, ','))
-            {
-                if (i == 0)
-                {
-                    try
-                    {
+            while (getline(ss, temp, ',')) {
+                if (i == 0) {
+                    try {
                         veryLong = std::stoll(temp) / 1000;
                         tempTimestamp = veryLong;
-                    }
-                    catch (std::exception& e)
-                    {
+                    } catch (std::exception& e) {
                         string errorText = "Can't convert timestamp to integer: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
                         return;
                     }
                     ED.Daily.Times.push_back(tempTimestamp);
-                }
-                else
-                {
-                    try
-                    {
+                } else {
+                    try {
                         tempData = stof(temp);
-                    }
-                    catch (const std::exception& e)
-                    {
+                    } catch (const std::exception& e) {
                         string errorText = "Can't convert to float: " + string(e.what());
                         CD.Error = true;
                         CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
@@ -127,13 +109,11 @@ class SSHDataHandler
             CD.Progress += (NewRowEnd - CD.Progress);
             CD.AvgRowSize = (CD.Progress - CD.HeaderEnd) / CD.RowsConverted;
 
-            if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize)
-            {
+            if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize) {
                 KeepConverting = false;
             }
 
-            if (CD.Progress == CD.DataSize)
-            {
+            if (CD.Progress == CD.DataSize) {
                 KeepConverting = false;
                 CD.Completed = true;
                 CD.Error = false;
@@ -148,10 +128,8 @@ class SSHDataHandler
     static std::vector<std::string> GetHeader() { return CD.Header; }
 
     // This function shouldn't be here. It should be a member function of ED.
-    static void ComputeAnalytics(PDTypes::EnergyStruct& ED)
-    {
-        for (auto& keyValuePair : ED.Daily.Es)
-        {
+    static void ComputeAnalytics(PDTypes::EnergyStruct& ED) {
+        for (auto& keyValuePair : ED.Daily.Es) {
             PDTypes::Entries& refEntry = keyValuePair.second;
             auto begin = refEntry.Values.cbegin();
             auto end = refEntry.Values.cend();
@@ -189,8 +167,7 @@ class APIDataHandler // whats that?
     void foo() {}
 };
 
-class RTDataHandler
-{
+class RTDataHandler {
   private:
     int64_t a;
 

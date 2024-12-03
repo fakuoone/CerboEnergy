@@ -2,17 +2,15 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 #include "cerboLogger.h"
 #include "cerboModbus.h"
 #include "cerboPlots.h"
 #include "cerboSSH.h"
 #include "dataHandler.h"
 #include "dataTypes.h"
-#include "vrmApi.h"
-
 #include "imgui.h"
+#include "stb_image.h"
+#include "vrmApi.h"
 
 #include <array>
 #include <d3d11.h>
@@ -23,8 +21,7 @@
 
 #define ICON_SIZE 32;
 
-namespace CerboGui
-{
+namespace CerboGui {
 bool LoadTextureFromMemory(ID3D11Device* deviceFromMain,
                            const void* data,
                            size_t data_size,
@@ -37,8 +34,7 @@ bool LoadTextureFromFile(ID3D11Device* renderDeviceFromMain,
                          int* out_width,
                          int* out_height);
 
-class App
-{
+class App {
   private:
     uint16_t windowCount;
     ImGuiID dockSpace;
@@ -48,32 +44,26 @@ class App
 
     byte IconSize = 50;
 
-    void CreateDockSpace()
-    {
+    void CreateDockSpace() {
         dockSpace = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
         ImGui::SetNextWindowDockID(dockSpace);
     }
 
-    bool AddAppControlButton(const std::string& name, bool enable, GUITypes::IconData icon, bool isLastInRow)
-    {
-        if (AddButton(name, enable, icon, 1.0f))
-        {
+    bool AddAppControlButton(const std::string& name, bool enable, GUITypes::IconData icon, bool isLastInRow) {
+        if (AddButton(name, enable, icon, 1.0f)) {
             return true;
         }
-        if (!isLastInRow)
-        {
+        if (!isLastInRow) {
             ImGui::SameLine();
         }
         return false;
     }
 
-    bool AddButton(const std::string& name, bool enable, GUITypes::IconData icon, float sizeScaling)
-    {
+    bool AddButton(const std::string& name, bool enable, GUITypes::IconData icon, float sizeScaling) {
         ImGui::BeginDisabled(!enable);
         if (ImGui::ImageButton(name.c_str(),
                                (ImTextureID)(intptr_t)icon.texturePtr,
-                               ImVec2(IconSize * sizeScaling, IconSize * sizeScaling)))
-        {
+                               ImVec2(IconSize * sizeScaling, IconSize * sizeScaling))) {
             ImGui::EndDisabled();
             return true;
         }
@@ -81,26 +71,22 @@ class App
         return false;
     }
 
-    void CreateAppControls()
-    {
+    void CreateAppControls() {
         GUITypes::IconData connectIcon = IconMap.at(GUITypes::IconVariants::CONNECT);
         GUITypes::IconData disConnectIcon = IconMap.at(GUITypes::IconVariants::DISCONNECT);
         GUITypes::IconData readIcon = IconMap.at(GUITypes::IconVariants::READ_DATA);
         GUITypes::IconData pauseIcon = IconMap.at(GUITypes::IconVariants::PAUSE);
-        if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen))
-        {
+        if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (AddAppControlButton("Verbindung aufbauen",
                                     CerboSSH::GetConnectionState() < SSHTypes::ConnectionState::CONNECTED,
                                     connectIcon,
-                                    false))
-            {
+                                    false)) {
                 CerboSSH::ConnectCerbo();
             }
             if (AddAppControlButton("Daten lesen",
                                     CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::CONNECTED,
                                     readIcon,
-                                    false))
-            {
+                                    false)) {
                 SSHDataHandler::ResetSSHData();
                 CerboSSH::ReadEnergyFile();
                 VisualizerInstance->GetData(CerboSSH::GetRawString());
@@ -108,54 +94,44 @@ class App
             if (AddAppControlButton("Verbindung trennen",
                                     CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::SESSION,
                                     disConnectIcon,
-                                    true))
-            {
+                                    true)) {
                 CerboSSH::DisconnectCerbo();
             }
             AddConnectionInfo(GUITypes::DataSource::SSH);
         }
-        if (ImGui::CollapsingHeader("Modbus-Daten", ImGuiTreeNodeFlags_DefaultOpen))
-        {
+        if (ImGui::CollapsingHeader("Modbus-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (AddAppControlButton("Verbindung aufbauen##2",
                                     CerboModbus::GetConnectionState() < ModbusTypes::ConnectionState::CONNECTED,
                                     connectIcon,
-                                    false))
-            {
+                                    false)) {
                 CerboModbus::Connect();
             }
             bool readingActive = CerboModbus::GetReadingActive();
             const GUITypes::IconData modbusIcon = readingActive ? pauseIcon : readIcon;
-            if (readingActive)
-            {
+            if (readingActive) {
                 CerboModbus::ReadAll();
             }
             if (AddAppControlButton("Daten lesen##2",
                                     CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED,
                                     modbusIcon,
-                                    false))
-            {
+                                    false)) {
                 CerboModbus::ToggleReadingActive();
             }
             if (AddAppControlButton("Verbindung trennen##2",
                                     CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED,
                                     disConnectIcon,
-                                    true))
-            {
+                                    true)) {
                 CerboModbus::Disconnect();
             }
             AddConnectionInfo(GUITypes::DataSource::MODBUS);
         }
-        if (ImGui::CollapsingHeader("API-Daten", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            if (AddAppControlButton("Verbindung aufbauen##3", true, connectIcon, false))
-            {
+        if (ImGui::CollapsingHeader("API-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (AddAppControlButton("Verbindung aufbauen##3", true, connectIcon, false)) {
                 CerboVrm::Connect();
             }
-            if (AddAppControlButton("Daten lesen##3", true, readIcon, false))
-            {
+            if (AddAppControlButton("Daten lesen##3", true, readIcon, false)) {
             }
-            if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, true))
-            {
+            if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, true)) {
             }
             AddConnectionInfo(GUITypes::DataSource::API);
         }
@@ -163,8 +139,7 @@ class App
         ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     }
 
-    void AddConnectionInfo(GUITypes::DataSource dataSource)
-    {
+    void AddConnectionInfo(GUITypes::DataSource dataSource) {
         // TBD: POSITIONIERUNG
         SSHTypes::ConnectionState sshConnectionState;
         ModbusTypes::ConnectionState modbusConnectionState;
@@ -182,12 +157,10 @@ class App
 
         float progress;
 
-        switch (dataSource)
-        {
+        switch (dataSource) {
         case GUITypes::DataSource::SSH:
             sshConnectionState = CerboSSH::GetConnectionState();
-            for (uint16_t i = 0; i < SSHTypes::ProgressLookup.at(SSHTypes::ConnectionState::READ_RESULT); i++)
-            {
+            for (uint16_t i = 0; i < SSHTypes::ProgressLookup.at(SSHTypes::ConnectionState::READ_RESULT); i++) {
                 rectColor = sshConnectionState > i ? ImGui::GetColorU32(ImVec4{0, 1, 0, 1})
                                                    : ImGui::GetColorU32(ImVec4{0, 1, 0, 0.2f});
                 windowDrawList->AddRectFilled(topLeft, bottomRight, rectColor);
@@ -199,8 +172,7 @@ class App
 
         case GUITypes::DataSource::MODBUS:
             modbusConnectionState = CerboModbus::GetConnectionState();
-            for (uint16_t i = 0; i < ModbusTypes::ProgressLookup.at(ModbusTypes::ConnectionState::READ_RESULT); i++)
-            {
+            for (uint16_t i = 0; i < ModbusTypes::ProgressLookup.at(ModbusTypes::ConnectionState::READ_RESULT); i++) {
                 rectColor = modbusConnectionState > i ? ImGui::GetColorU32(ImVec4{0, 1, 0, 1})
                                                       : ImGui::GetColorU32(ImVec4{0, 1, 0, 0.2f});
                 windowDrawList->AddRectFilled(topLeft, bottomRight, rectColor);
@@ -219,8 +191,7 @@ class App
         ImGui::ProgressBar(progress);
     }
 
-    void AddLoggerControls()
-    {
+    void AddLoggerControls() {
         ImVec2 windowPos = ImGui::GetWindowPos();
         ImVec2 windowSize = ImGui::GetWindowSize();
         float x = windowPos.x + windowSize.x - 50 - ImGui::GetStyle().WindowPadding.x;
@@ -232,17 +203,14 @@ class App
         ImVec2 buttonPos = ImVec2(x, y);
 
         ImGui::SetCursorScreenPos(buttonPos);
-        if (ImGui::Button("Clear", ImVec2(50, 50)))
-        {
+        if (ImGui::Button("Clear", ImVec2(50, 50))) {
             CerboLog::ResetLogs();
             ImGui::SetScrollY(0.0f);
         }
     }
 
-    void AddRealtimeData()
-    {
-        if (!CerboModbus::GetUnitsAreCreated())
-        {
+    void AddRealtimeData() {
+        if (!CerboModbus::GetUnitsAreCreated()) {
             return;
         }
         AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
@@ -250,12 +218,10 @@ class App
         AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
     }
 
-    void AddRealTimeUnitData(const ModbusUnit& targetUnit)
-    {
+    void AddRealTimeUnitData(const ModbusUnit& targetUnit) {
         const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
         ImGui::Text(targetUnit.name.c_str());
-        for (const auto& [lId, lRegister] : targetRegisters)
-        {
+        for (const auto& [lId, lRegister] : targetRegisters) {
             ModbusTypes::RegisterResult lResult = lRegister.GetResult();
             std::string registerText = std::format(
                 "{}: {} {}", lRegister.Name, lResult.Value / lRegister.Divisor, DataUnitLookup.at(lRegister.Unit));
@@ -266,26 +232,21 @@ class App
         ImGui::SetCursorPos(spacing);
     }
 
-    void AddDataControls()
-    {
+    void AddDataControls() {
         const std::vector<std::string> header = SSHDataHandler::GetHeader();
         const GUITypes::IconData barIcon = IconMap.at(GUITypes::IconVariants::BAR);
         const GUITypes::IconData lineIcon = IconMap.at(GUITypes::IconVariants::LINE);
 
-        if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen))
-        {
+        if (ImGui::CollapsingHeader("SSH-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
             const uint16_t dataCategories = SSHDataHandler::GetDataCategories();
             const uint16_t countSubPlots = VisualizerInstance->GetSubPlotCount();
             std::array<bool, PDTypes::noDragSourceTypes> plotInSubPlotArray;
             std::array<bool, PDTypes::noDragSourceTypes> plotInSubPlotArrayPrev;
-            for (uint16_t i = 0; i < dataCategories; i++)
-            {
+            for (uint16_t i = 0; i < dataCategories; i++) {
                 const std::string buttonName = SSHDataHandler::GetTopicName(i);
-                if (ImGui::TreeNode(buttonName.c_str()))
-                {
+                if (ImGui::TreeNode(buttonName.c_str())) {
 
-                    for (uint16_t j = 0; j < countSubPlots; j++)
-                    {
+                    for (uint16_t j = 0; j < countSubPlots; j++) {
                         plotInSubPlotArray[0] =
                             VisualizerInstance->CheckPlotInSubplot(j, i, PDTypes::DragSource::SSHRAW);
                         plotInSubPlotArray[1] =
@@ -294,38 +255,32 @@ class App
                         plotInSubPlotArray[3] =
                             VisualizerInstance->CheckPlotInSubplot(j, i, PDTypes::DragSource::MODBUS);
                         plotInSubPlotArrayPrev = plotInSubPlotArray;
-                        if (j == 0)
-                        {
+                        if (j == 0) {
                             AddButton("RAW##" + std::to_string(i), true, barIcon, 0.5);
                             BeginDragDropSource(PDTypes::DragSource::SSHRAW, i, false);
                         }
 
-                        if (plotInSubPlotArray[0])
-                        {
+                        if (plotInSubPlotArray[0]) {
                             ImGui::SameLine();
                             ImGui::Checkbox(std::string{"##" + i + j}.c_str(), &plotInSubPlotArray[0]);
                         }
 
-                        if (j == 0)
-                        {
+                        if (j == 0) {
                             AddButton("LINE##" + std::to_string(i), true, lineIcon, 0.5);
                             BeginDragDropSource(PDTypes::DragSource::SSHRAW, i, false);
                         }
 
-                        if (plotInSubPlotArray[1])
-                        {
+                        if (plotInSubPlotArray[1]) {
                             ImGui::SameLine();
                             ImGui::Checkbox(std::string{"##" + i + j}.c_str(), &plotInSubPlotArray[1]);
                         }
 
-                        if (j == 0)
-                        {
+                        if (j == 0) {
                             AddButton("TBD##" + std::to_string(i), true, lineIcon, 0.5);
                             BeginDragDropSource(PDTypes::DragSource::SSHRAW, i, false);
                         }
 
-                        if (plotInSubPlotArray[2])
-                        {
+                        if (plotInSubPlotArray[2]) {
                             ImGui::SameLine();
                             ImGui::Checkbox(std::string{"##" + i + j}.c_str(), &plotInSubPlotArray[2]);
                         }
@@ -341,10 +296,8 @@ class App
                 }
             }
         }
-        if (ImGui::CollapsingHeader("API-Daten", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            if (ImGui::TreeNode("Reserve"))
-            {
+        if (ImGui::CollapsingHeader("API-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::TreeNode("Reserve")) {
                 ImGui::TreePop();
                 ImGui::Spacing();
             }
@@ -355,23 +308,17 @@ class App
                                 const std::array<bool, PDTypes::noDragSourceTypes>& arrayLastFrame,
                                 uint16_t subPlotIndex,
                                 uint16_t plotIndex,
-                                uint16_t dataIndex)
-    {
-        for (uint16_t i = 0; i < PDTypes::noDragSourceTypes; i++)
-        {
-            if (!arrayNow[i] && arrayLastFrame[i])
-            {
+                                uint16_t dataIndex) {
+        for (uint16_t i = 0; i < PDTypes::noDragSourceTypes; i++) {
+            if (!arrayNow[i] && arrayLastFrame[i]) {
                 VisualizerInstance->RemovePlot(subPlotIndex, plotIndex, dataIndex);
             }
         }
     }
 
-    void BeginDragDropSource(PDTypes::DragSource dragSourceType, uint16_t i, bool mustBeInactive)
-    {
-        if (ImGui::IsItemActive() || !mustBeInactive)
-        {
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-            {
+    void BeginDragDropSource(PDTypes::DragSource dragSourceType, uint16_t i, bool mustBeInactive) {
+        if (ImGui::IsItemActive() || !mustBeInactive) {
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
                 std::string dragSource = PDTypes::DragSourceMap.at(dragSourceType);
                 PDTypes::DragDrop dragData = PDTypes::DragDrop{dragSource, i};
                 VisualizerInstance->CerboPlots::Visualizer::PrepareDropTarget(dragData);
@@ -381,25 +328,20 @@ class App
         }
     }
 
-    void BeginWindow(const char* Name)
-    {
+    void BeginWindow(const char* Name) {
         ImGui::Begin(Name);
         windowCount++;
     }
 
-    void EndWindows()
-    {
-        for (size_t i = 0; i < windowCount; i++)
-        {
+    void EndWindows() {
+        for (size_t i = 0; i < windowCount; i++) {
             ImGui::End();
         }
     }
 
-    void LoadIcons()
-    {
+    void LoadIcons() {
         const uint16_t iconCount = GUITypes::IconLookUp.size();
-        for (uint16_t i = 0; i < iconCount; i++)
-        {
+        for (uint16_t i = 0; i < iconCount; i++) {
             // Shouldnt be a relative path, needs to be user config (or hard-baked into the code)
             std::string iconPath = "../";
             GUITypes::Icon icon = GUITypes::IconLookUp.at(i);
@@ -413,8 +355,7 @@ class App
 
   public:
     App(std::unique_ptr<CerboPlots::Visualizer> cVisualizerPtr, ID3D11Device* cRenderDeviceFromMain)
-        : VisualizerInstance(std::move(cVisualizerPtr)), renderDeviceFromMain{cRenderDeviceFromMain}
-    {
+        : VisualizerInstance(std::move(cVisualizerPtr)), renderDeviceFromMain{cRenderDeviceFromMain} {
         windowCount = 0;
         dockSpace = 0;
 
@@ -423,8 +364,7 @@ class App
 
     ~App() { EndWindows(); }
 
-    uint16_t RunUI()
-    {
+    uint16_t RunUI() {
         CreateDockSpace();
         windowCount = 0;
         BeginWindow("Steuerung");
@@ -458,8 +398,7 @@ bool LoadTextureFromMemory(ID3D11Device* deviceFromMain,
                            size_t data_size,
                            ID3D11ShaderResourceView** out_srv,
                            int* out_width,
-                           int* out_height)
-{
+                           int* out_height) {
     // Load from disk into a raw RGBA buffer
     int image_width = 0;
     int image_height = 0;
@@ -509,8 +448,7 @@ bool LoadTextureFromFile(ID3D11Device* renderDeviceFromMain,
                          const char* file_name,
                          ID3D11ShaderResourceView** out_srv,
                          int* out_width,
-                         int* out_height)
-{
+                         int* out_height) {
     FILE* f = fopen(file_name, "rb");
     if (f == NULL)
         return false;

@@ -2,7 +2,6 @@
 
 #include "cerboLogger.h"
 #include "dataHandler.h"
-
 #include "imgui.h"
 #include "implot.h"
 #include "implot_internal.h"
@@ -18,15 +17,12 @@
 #include <string>
 #include <unordered_map>
 
-namespace CerboPlots
-{
-class Visualizer
-{
+namespace CerboPlots {
+class Visualizer {
   private:
     PDTypes::DragDrop DropTarget;
 
-    struct EntryInfo
-    {
+    struct EntryInfo {
         // uint16 is hella small for a size
         uint16_t Size;
         uint16_t DataIndex;
@@ -36,33 +32,25 @@ class Visualizer
         PDTypes::BasicMetrics Metrics;
     };
 
-    struct PlotEntry
-    {
+    struct PlotEntry {
         EntryInfo Info;
         std::vector<int32_t> SourceX;
         std::vector<float> SourceY;
 
         PlotEntry(EntryInfo info, std::vector<int32_t> x, std::vector<float> y)
-            : Info{std::move(info)}, SourceX{std::move(x)}, SourceY{std::move(y)}
-        {
-        }
+            : Info{std::move(info)}, SourceX{std::move(x)}, SourceY{std::move(y)} {}
     };
 
     std::vector<std::vector<PlotEntry>> SubPlots;
     PDTypes::EnergyStruct ED;
 
     void
-    ReceiveDragDropTarget(PDTypes::EnergyStruct& ED, const char* dropType, const std::vector<PlotEntry>& plotEntries)
-    {
+    ReceiveDragDropTarget(PDTypes::EnergyStruct& ED, const char* dropType, const std::vector<PlotEntry>& plotEntries) {
         // dropData muss mehr Informationen beinhalten!
-        if (dropType != nullptr)
-        {
-            if (ImGui::BeginDragDropTarget())
-            {
-                if (DropTargetValid(ED, plotEntries))
-                {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(dropType))
-                    {
+        if (dropType != nullptr) {
+            if (ImGui::BeginDragDropTarget()) {
+                if (DropTargetValid(ED, plotEntries)) {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(dropType)) {
                         IM_ASSERT(payload->DataSize == sizeof(PDTypes::DragDrop));
                         // thats some s***
                         // I don't have imgui so I can't see the ImGuiPayload type. Can you safely cast its "Data"
@@ -86,24 +74,19 @@ class Visualizer
         }
     }
 
-    bool DropTargetValid(PDTypes::EnergyStruct& ED, const std::vector<PlotEntry>& plotEntries)
-    {
+    bool DropTargetValid(PDTypes::EnergyStruct& ED, const std::vector<PlotEntry>& plotEntries) {
         bool returnValue = false;
         const PDTypes::BasicMetrics& droppedAN = ED.Daily.Es[SSHDataHandler::GetPlotKey(DropTarget.DataIndex)].AN;
 
         // you need to explain this for/switch logic to me, this can probably be written cleaner.
-        for (const PlotEntry& entry : plotEntries)
-        {
-            switch (entry.Info.PlotType)
-            {
+        for (const PlotEntry& entry : plotEntries) {
+            switch (entry.Info.PlotType) {
             case PDTypes::PlotTypes::BARS:
-                if (returnValue)
-                {
+                if (returnValue) {
                     return false;
                 }
                 if (entry.Info.Metrics.Max.Value >= droppedAN.Min.Value ||
-                    entry.Info.Metrics.Min.Value >= droppedAN.Max.Value)
-                {
+                    entry.Info.Metrics.Min.Value >= droppedAN.Max.Value) {
                     returnValue = true;
                 }
                 break;
@@ -117,8 +100,7 @@ class Visualizer
         return true;
     }
 
-    void PrepareSubPlot(const std::vector<PlotEntry>& subPlot)
-    {
+    void PrepareSubPlot(const std::vector<PlotEntry>& subPlot) {
         PDTypes::MaxValues plotExtremes = GetXYExtremes(subPlot);
 
         ImPlot::SetupAxes(
@@ -135,10 +117,8 @@ class Visualizer
         ImPlot::TagY(plotExtremes.ymax, ImVec4(0.1, 0.1, 0.1, 1), true);
     }
 
-    void PlotInSubPlot(const PlotEntry& plotEntry)
-    {
-        switch (plotEntry.Info.PlotType)
-        {
+    void PlotInSubPlot(const PlotEntry& plotEntry) {
+        switch (plotEntry.Info.PlotType) {
         case PDTypes::PlotTypes::BARS:
             PlotProperBars(
                 plotEntry.Info.Name, plotEntry.SourceX, plotEntry.SourceY, plotEntry.Info.Size, plotEntry.Info.Metrics);
@@ -151,36 +131,28 @@ class Visualizer
         }
     }
 
-    PDTypes::MaxValues GetXYExtremes(const std::vector<PlotEntry>& plots)
-    {
+    PDTypes::MaxValues GetXYExtremes(const std::vector<PlotEntry>& plots) {
         PDTypes::MaxValues returnStruct{};
-        for (const PlotEntry& Plot : plots)
-        {
-            if (Plot.Info.Metrics.Min.Value < returnStruct.ymin)
-            {
+        for (const PlotEntry& Plot : plots) {
+            if (Plot.Info.Metrics.Min.Value < returnStruct.ymin) {
                 returnStruct.ymin = Plot.Info.Metrics.Min.Value;
             }
-            if (Plot.Info.Metrics.Max.Value > returnStruct.ymax)
-            {
+            if (Plot.Info.Metrics.Max.Value > returnStruct.ymax) {
                 returnStruct.ymax = Plot.Info.Metrics.Max.Value;
             }
-            if (Plot.SourceX[0] < returnStruct.xmin)
-            {
+            if (Plot.SourceX[0] < returnStruct.xmin) {
                 returnStruct.xmin = Plot.SourceX[0];
             }
             // why is not the size of sourceX used but the size stored in another member of Plot?
-            if (Plot.SourceX.back() > returnStruct.xmax)
-            {
+            if (Plot.SourceX.back() > returnStruct.xmax) {
                 returnStruct.xmax = Plot.SourceX.back();
             }
         }
         return returnStruct;
     }
 
-    void FinishingTouches(const std::vector<PlotEntry>& subPlot)
-    {
-        if (subPlot.size() > 1)
-        {
+    void FinishingTouches(const std::vector<PlotEntry>& subPlot) {
+        if (subPlot.size() > 1) {
             ImDrawList* drawList = ImPlot::GetPlotDrawList();
             const PDTypes::MaxValues plotExtremes = GetXYExtremes(subPlot);
             const ImVec2 start = ImPlot::PlotToPixels(plotExtremes.xmin, 0);
@@ -194,11 +166,9 @@ class Visualizer
                         const std::vector<int32_t>& xdata,
                         const std::vector<float>& ydata,
                         int16_t count,
-                        PDTypes::BasicMetrics AN)
-    {
+                        PDTypes::BasicMetrics AN) {
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
-        if (ImPlot::BeginItem(plotName.c_str()))
-        {
+        if (ImPlot::BeginItem(plotName.c_str())) {
             PDTypes::BarHover hoverData = FindHoveredBar(xdata, ydata, count);
             ImU32 colorBasic = ImGui::GetColorU32(ImVec4(0.113f, 0.153, 0.261f, 1.000f));
             ImU32 colorHighL = ImGui::GetColorU32(ImVec4(0.156f, 0.261f, 0.651f, 1.000f));
@@ -211,24 +181,20 @@ class Visualizer
             assert(count >= xdata.size());
             assert(count >= ydata.size());
 
-            for (int32_t i = 0; i < count; ++i)
-            {
+            for (int32_t i = 0; i < count; ++i) {
                 hoverData.inBoundY&& hoverData.iHighL == i ? color = colorHighL : color = colorBasic;
                 leftX = xdata[i];
-                if (i > 0)
-                {
+                if (i > 0) {
                     leftX = xdata[i - 1];
                     xdata[i] - xdata[i - 1] < 86400 ? rightX = leftX + 86400 : rightX = xdata[i];
-                }
-                else
-                {
+                } else {
                     rightX = leftX;
                     leftX -= 86400;
                 }
 
                 if ((hoverData.iHighL > -1) && (i > 0) && (hoverData.iHighL - noShadingBars + 1 < i) &&
-                    (i < hoverData.iHighL + noShadingBars - 1) && ((i - 1) != hoverData.iHighL || !hoverData.inBoundY))
-                {
+                    (i < hoverData.iHighL + noShadingBars - 1) &&
+                    ((i - 1) != hoverData.iHighL || !hoverData.inBoundY)) {
                     ImVec2 P3 = ImPlot::PlotToPixels(leftX, 0);
                     ImVec2 P4 = ImPlot::PlotToPixels(leftX - 15000, ydata[i - 1]);
                     drawList->AddRectFilled(P3, P4, colorShade);
@@ -244,12 +210,10 @@ class Visualizer
     }
 
     PDTypes::BarHover
-    FindHoveredBar(const std::vector<int32_t>& xValues, const std::vector<float>& yValues, int16_t dataCount)
-    {
+    FindHoveredBar(const std::vector<int32_t>& xValues, const std::vector<float>& yValues, int16_t dataCount) {
         PDTypes::BarHover returnData{};
 
-        if (ImPlot::IsPlotHovered())
-        {
+        if (ImPlot::IsPlotHovered()) {
             returnData.isHovered = true;
             ImPlotPoint mouse = ImPlot::GetPlotMousePos();
             time_t mouseXtime = ImPlotTime::FromDouble(mouse.x).S;
@@ -258,16 +222,12 @@ class Visualizer
             // FIND CORRESPONDING BAR
             float percentile = (float)(mouseX - xValues[0]) / (float)(xValues[dataCount - 1] - xValues[0]);
             int32_t startSearch;
-            if (percentile > 0 && percentile < 1)
-            {
+            if (percentile > 0 && percentile < 1) {
                 startSearch = static_cast<int32_t>(percentile * (dataCount - 1));
-                for (; startSearch < dataCount - 1; startSearch++)
-                {
-                    if (mouseX > (xValues[startSearch] - 86400) && mouseX <= xValues[startSearch])
-                    {
+                for (; startSearch < dataCount - 1; startSearch++) {
+                    if (mouseX > (xValues[startSearch] - 86400) && mouseX <= xValues[startSearch]) {
                         returnData.iHighL = startSearch;
-                        if (abs(mouse.y) < abs(yValues[startSearch]))
-                        {
+                        if (abs(mouse.y) < abs(yValues[startSearch])) {
                             returnData.inBoundY = true;
                             break;
                         }
@@ -282,11 +242,9 @@ class Visualizer
                          const std::vector<float>& yValues,
                          int16_t dataCount,
                          ImDrawList* plotDrawList,
-                         PDTypes::BarHover hoverData)
-    {
+                         PDTypes::BarHover hoverData) {
 
-        if (hoverData.isHovered)
-        {
+        if (hoverData.isHovered) {
             ImPlotPoint mouse = ImPlot::GetPlotMousePos();
             time_t mouseXtime = ImPlotTime::FromDouble(mouse.x).S;
             int32_t mouseX = static_cast<int32_t>(mouseXtime);
@@ -322,17 +280,13 @@ class Visualizer
             plotDrawList->AddLine(x, y, ImGui::GetColorU32(ImVec4(1, 1, 1, 0.3)));
         } */
 
-        if (hoverData.iHighL > -1)
-        {
+        if (hoverData.iHighL > -1) {
             xTag = xValues[hoverData.iHighL] - 0.5 * (xValues[hoverData.iHighL] - xValues[hoverData.iHighL - 1]);
             ImPlot::TagY(yValues[hoverData.iHighL], ImVec4(1, 0, 0, 1), true);
-        }
-        else
-        {
+        } else {
             xTag = ImPlot::PixelsToPlot(ImVec2(plotOrigin.x + plotSize.x, plotOrigin.y + plotSize.y)).x - 100;
         }
-        if (plotOrigin.x > ImPlot::PlotToPixels(ImPlotPoint(ImVec2(xTag, 0))).x)
-        {
+        if (plotOrigin.x > ImPlot::PlotToPixels(ImPlotPoint(ImVec2(xTag, 0))).x) {
             xTag = ImPlot::PixelsToPlot(plotOrigin).x + 100;
         }
 
@@ -346,27 +300,25 @@ class Visualizer
                              const std::array<size_t, Sx>& xValues,
                              const std::array<double, Sy>& yValues,
                              size_t start,
-                             size_t end) const
-    {
+                             size_t end) const {
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
         const int32_t size = std::min(xValues.size(), yValues.size());
         ImU32 color = ImGui::GetColorU32(ImVec4{1, 1, 1, 1});
-        if (size == 0)
-        {
+        if (size == 0) {
             return;
         }
-        if (ImPlot::BeginItem(plotName.c_str()))
-        {
+        if (ImPlot::BeginItem(plotName.c_str())) {
             size_t i{start};
-            while (i != end)
-            {
-                drawList->AddRectFilled(ImVec2{xValues[i - 1], 500}, ImVec2{xValues[i], 400}, color);
-                drawList->AddLine(ImVec2{xValues[i - 1], yValues[i - 1]}, ImVec2{xValues[i], yValues[i]}, color);
+            while (i != end) {
                 i++;
-                if (i == size)
-                {
+                if (i == size) {
                     i = 0;
                 }
+                ImVec2 startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[i - 1]), yValues[i - 1]);
+                ImVec2 endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[i]), yValues[i]);
+
+                drawList->AddLine(startPos, endPos, color);
+                // drawList->AddRectFilled(startPos, endPos, color);
             }
         }
     }
@@ -374,23 +326,18 @@ class Visualizer
     template <size_t Sx, size_t Sy>
     void PlotLineFromCircularBuffer(const std::string& plotName,
                                     const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer,
-                                    const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const
-    {
+                                    const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const {
         PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead());
     }
 
   public:
-    void GetData(const std::string& rawData)
-    {
-        if (rawData == "")
-        {
+    void GetData(const std::string& rawData) {
+        if (rawData == "") {
             return;
         }
-        if (SSHDataHandler::ConversionPending() || SSHDataHandler::ReadyForConversion())
-        {
+        if (SSHDataHandler::ConversionPending() || SSHDataHandler::ReadyForConversion()) {
             SSHDataHandler::FormatData(ED, rawData);
-            if (SSHDataHandler::DataAvailable())
-            {
+            if (SSHDataHandler::DataAvailable()) {
                 const std::vector<int32_t>& xdata = ED.Daily.Times;
                 const std::vector<float>& ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
                 PDTypes::IsInPlot& inPlotInfo = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].PlotInfo;
@@ -401,24 +348,19 @@ class Visualizer
         }
     }
 
-    void PlotGraph()
-    {
+    void PlotGraph() {
         ImVec2 plotSize = ImGui::GetContentRegionAvail();
-        if (SSHDataHandler::ConversionPending() || !SSHDataHandler::DataAvailable())
-        {
+        if (SSHDataHandler::ConversionPending() || !SSHDataHandler::DataAvailable()) {
             return;
         }
         ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(20.0f, 20.0f)); // 20px padding
 
-        if (ImPlot::BeginPlot("Energiedaten", plotSize))
-        {
-            for (std::vector<PlotEntry> SubPlot : SubPlots)
-            {
+        if (ImPlot::BeginPlot("Energiedaten", plotSize)) {
+            for (std::vector<PlotEntry> SubPlot : SubPlots) {
                 ReceiveDragDropTarget(ED, DropTarget.SourceType.c_str(), SubPlot);
                 PrepareSubPlot(SubPlot);
 
-                for (PlotEntry Plot : SubPlot)
-                {
+                for (PlotEntry Plot : SubPlot) {
                     PlotInSubPlot(Plot);
                 }
                 FinishingTouches(SubPlot);
@@ -427,15 +369,12 @@ class Visualizer
         }
     }
 
-    void PlotRealTimeData() const
-    {
-        if (!CerboModbus::GetUnitsAreCreated())
-        {
+    void PlotRealTimeData() const {
+        if (!CerboModbus::GetUnitsAreCreated()) {
             return;
         }
         ImVec2 plotSize = ImGui::GetContentRegionAvail();
-        if (ImPlot::BeginPlot("Echtzeitdaten", plotSize))
-        {
+        if (ImPlot::BeginPlot("Echtzeitdaten", plotSize)) {
             PrepareUnitDataPlot();
             PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
             PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
@@ -444,34 +383,33 @@ class Visualizer
         }
     }
 
-    void PlotUnitData(const ModbusUnit& targetUnit) const
-    {
+    void PlotUnitData(const ModbusUnit& targetUnit) const {
 
         const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
 
-        for (const auto& [lId, lRegister] : targetRegisters)
-        {
+        for (const auto& [lId, lRegister] : targetRegisters) {
             const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
             const CircularBuffer<double, CIRC_BUFFER_SIZE>& valuesBuffer = lRegister.GetRTValues();
             PlotLineFromCircularBuffer(lRegister.Name, timesBuffer, valuesBuffer);
         }
     }
 
-    void PrepareUnitDataPlot() const
-    {
+    void PrepareUnitDataPlot() const {
         PDTypes::MaxValues plotExtremes;
         plotExtremes.xmax = Timing::GetTimeNow().ms / 1000;
         plotExtremes.xmin = plotExtremes.xmax - 1000;
         plotExtremes.ymax = 1000;
         plotExtremes.ymin = -500;
 
-        ImPlot::SetupAxes(
-            "Zeit", "kWh", ImPlotAxisFlags_NoGridLines, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoGridLines);
+        ImPlot::SetupAxes("Zeit",
+                          "kWh",
+                          ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_AutoFit,
+                          ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoGridLines);
         ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-        ImPlot::SetupAxisLimits(ImAxis_Y1, plotExtremes.ymin, plotExtremes.ymax, ImPlotCond_Always);
+        // ImPlot::SetupAxisLimits(ImAxis_Y1, plotExtremes.ymin, plotExtremes.ymax, ImPlotCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
-        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
+        // ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
         ;
     }
 
@@ -484,23 +422,18 @@ class Visualizer
                  PDTypes::PlotTypes type,
                  PDTypes::DragSource dragSourceType,
                  uint16_t dataIndex,
-                 PDTypes::IsInPlot& inPlotInfo)
-    {
+                 PDTypes::IsInPlot& inPlotInfo) {
         const std::string pKey = SSHDataHandler::GetPlotKey(dataIndex);
         EntryInfo toAddInfo = EntryInfo{
             size, dataIndex, SSHDataHandler::GetPlotName(dataIndex), type, dragSourceType, ED.Daily.Es[pKey].AN};
         PlotEntry toAddPlot = PlotEntry{std::move(toAddInfo), xdata, ydata};
-        if (SubPlots.size() == 0)
-        {
+        if (SubPlots.size() == 0) {
             SubPlots.push_back(std::vector<PlotEntry>());
         }
-        if (SubPlots.size() > subPlotIndex)
-        {
+        if (SubPlots.size() > subPlotIndex) {
             SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
             inPlotInfo.SubPlotIndex = subPlotIndex;
-        }
-        else
-        {
+        } else {
             assert(false && "Fix me");
             SubPlots.resize(subPlotIndex + 1);
             SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
@@ -509,22 +442,18 @@ class Visualizer
         inPlotInfo.InPlot = true;
     }
 
-    void RemovePlot(uint16_t subPlotIndex, uint16_t plotIndex, uint16_t dataIndex)
-    {
+    void RemovePlot(uint16_t subPlotIndex, uint16_t plotIndex, uint16_t dataIndex) {
         std::vector<PlotEntry>& entryRef = SubPlots.at(subPlotIndex);
         entryRef.erase(entryRef.begin() + plotIndex);
         ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo.InPlot = false;
     }
 
-    bool CheckPlotInSubplot(const uint16_t subPlotIndex, const uint16_t dataIndex, PDTypes::DragSource dataType) const
-    {
+    bool CheckPlotInSubplot(const uint16_t subPlotIndex, const uint16_t dataIndex, PDTypes::DragSource dataType) const {
         PDTypes::IsInPlot toCheck;
-        switch (dataType)
-        {
+        switch (dataType) {
         case PDTypes::DragSource::SSHRAW:
             toCheck = ED.Daily.Es.at(SSHDataHandler::GetPlotKey(dataIndex)).PlotInfo;
-            if (toCheck.SubPlotIndex == subPlotIndex && toCheck.InPlot)
-            {
+            if (toCheck.SubPlotIndex == subPlotIndex && toCheck.InPlot) {
                 return true;
             }
             break;
@@ -544,15 +473,13 @@ class Visualizer
     // Use const member fn'S to explicity state, that it will not alter your instances data members!
     // Could probably be applied to more functions but I don't wanna check every function, given your naming scheme
     // doesn't even enable to quickly identify class members.
-    PDTypes::IsInPlot GetIsInPlotInfo(uint16_t dataIndex) const
-    {
+    PDTypes::IsInPlot GetIsInPlotInfo(uint16_t dataIndex) const {
         return ED.Daily.Es.at(SSHDataHandler::GetPlotKey(dataIndex)).PlotInfo;
     }
 
     uint16_t GetSubPlotCount() const { return SubPlots.size(); }
 
-    void ResetData()
-    {
+    void ResetData() {
         DropTarget = PDTypes::DragDrop{"", 0};
         ED = PDTypes::EnergyStruct();
     }
