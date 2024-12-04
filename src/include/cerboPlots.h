@@ -300,14 +300,16 @@ class Visualizer {
                              const std::array<size_t, Sx>& xValues,
                              const std::array<double, Sy>& yValues,
                              size_t start,
-                             size_t end) const {
+                             size_t end,
+                             bool withFill) const {
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
         const int32_t size = std::min(xValues.size(), yValues.size());
-        ImU32 color = ImGui::GetColorU32(ImVec4{1, 1, 1, 1});
+
         if (size == 0) {
             return;
         }
         if (ImPlot::BeginItem(plotName.c_str())) {
+            ImU32 color = ImPlot::GetCurrentItem()->Color;
             size_t first{start + 1};
             size_t second{start};
             while (true) {
@@ -318,6 +320,17 @@ class Visualizer {
                 if (xValues[first] - xValues[second] < 20000) {
                     drawList->AddLine(startPos, endPos, color);
                 }
+                if (withFill) {
+                    ImVec2 xiSecStart = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), 0);
+                    ImVec2 xiSecEnd = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), 0);
+                    std::array<ImVec2, 4> points{xiSecStart, startPos, xiSecEnd, endPos};
+                    if (startPos.y <= 0) {
+                        std::reverse(points.begin(), points.end());
+                    }
+                    uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
+                    drawList->AddConvexPolyFilled(points.data(), 4, color & binaryMask);
+                }
+
                 if (first == end) {
                     break;
                 }
@@ -331,7 +344,7 @@ class Visualizer {
     void PlotLineFromCircularBuffer(const std::string& plotName,
                                     const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer,
                                     const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const {
-        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead());
+        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), true);
     }
 
   public:
@@ -400,8 +413,8 @@ class Visualizer {
 
     void PrepareUnitDataPlot() const {
         PDTypes::MaxValues plotExtremes;
-        plotExtremes.xmax = Timing::GetTimeNow().ms / 1000;
-        plotExtremes.xmin = plotExtremes.xmax - 1000;
+        plotExtremes.xmax = Timing::GetTimeNow().ms / 1000 + 100;
+        plotExtremes.xmin = Timing::GetTimeNow().ms / 1000;
         plotExtremes.ymax = 1000;
         plotExtremes.ymin = -500;
 
@@ -412,7 +425,7 @@ class Visualizer {
         ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
         // ImPlot::SetupAxisLimits(ImAxis_Y1, plotExtremes.ymin, plotExtremes.ymax, ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
+        ImPlot::SetupAxisLimits(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax, ImPlotCond_Once);
         // ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
         ;
     }

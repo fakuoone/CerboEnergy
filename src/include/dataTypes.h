@@ -238,6 +238,7 @@ template <typename T, size_t Size> class CircularBuffer {
     size_t Head{0};
     size_t Tail{0};
     bool Full{false};
+    bool Started{false};
     struct Iterator {
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -264,7 +265,7 @@ template <typename T, size_t Size> class CircularBuffer {
 
   public:
     void AppendData(const T& _data) {
-        if (Head != Tail) {
+        if (Started) {
             Head = (Head + 1) % Size;
             Tail = Full ? (Head + 1) % Size : 0;
             size_t diff = Head > Tail ? Head - Tail : Tail - Head;
@@ -273,9 +274,7 @@ template <typename T, size_t Size> class CircularBuffer {
             }
         }
         Data[Head] = _data;
-        if (Head == Tail) {
-            Head++;
-        }
+        Started = true;
     }
 
     const std::array<T, Size>& GetData() const { return Data; }
