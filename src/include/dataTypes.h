@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define CIRC_BUFFER_SIZE 1000
+#define CIRC_BUFFER_SIZE 5000
 
 namespace GUITypes {
 enum class IconVariants { CONNECT, READ_DATA, DISCONNECT, BAR, LINE, PAUSE };
@@ -264,14 +264,17 @@ template <typename T, size_t Size> class CircularBuffer {
 
   public:
     void AppendData(const T& _data) {
-        Data[Head++] = _data;
-        if (Full) {
-            Tail = Head--;
+        if (Head != Tail) {
+            Head = (Head + 1) % Size;
+            Tail = Full ? (Head + 1) % Size : 0;
+            size_t diff = Head > Tail ? Head - Tail : Tail - Head;
+            if (diff == Size - 1) {
+                Full = true;
+            }
         }
-        if (Head == Size) {
-            Full = true;
-            Head = 0;
-            Tail = Size;
+        Data[Head] = _data;
+        if (Head == Tail) {
+            Head++;
         }
     }
 

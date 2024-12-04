@@ -223,8 +223,8 @@ class App {
         ImGui::Text(targetUnit.name.c_str());
         for (const auto& [lId, lRegister] : targetRegisters) {
             ModbusTypes::RegisterResult lResult = lRegister.GetResult();
-            std::string registerText = std::format(
-                "{}: {} {}", lRegister.Name, lResult.Value / lRegister.Divisor, DataUnitLookup.at(lRegister.Unit));
+            std::string registerText =
+                std::format("{}: {} {}", lRegister.Name, lResult.Value, DataUnitLookup.at(lRegister.Unit));
             ImGui::Text(registerText.c_str());
         }
         const ImVec2 spacing =

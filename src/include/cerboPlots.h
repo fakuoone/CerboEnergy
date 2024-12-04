@@ -308,17 +308,21 @@ class Visualizer {
             return;
         }
         if (ImPlot::BeginItem(plotName.c_str())) {
-            size_t i{start};
-            while (i != end) {
-                i++;
-                if (i == size) {
-                    i = 0;
+            size_t first{start + 1};
+            size_t second{start};
+            while (true) {
+                first = first % size;
+                second = second % size;
+                ImVec2 startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), yValues[second]);
+                ImVec2 endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), yValues[first]);
+                if (xValues[first] - xValues[second] < 20000) {
+                    drawList->AddLine(startPos, endPos, color);
                 }
-                ImVec2 startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[i - 1]), yValues[i - 1]);
-                ImVec2 endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[i]), yValues[i]);
-
-                drawList->AddLine(startPos, endPos, color);
-                // drawList->AddRectFilled(startPos, endPos, color);
+                if (first == end) {
+                    break;
+                }
+                first++;
+                second++;
             }
         }
     }
