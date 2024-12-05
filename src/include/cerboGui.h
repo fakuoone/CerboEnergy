@@ -108,9 +108,6 @@ class App {
             }
             bool readingActive = CerboModbus::GetReadingActive();
             const GUITypes::IconData modbusIcon = readingActive ? pauseIcon : readIcon;
-            if (readingActive) {
-                CerboModbus::ReadAll();
-            }
             if (AddAppControlButton("Daten lesen##2",
                                     CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED,
                                     modbusIcon,
@@ -209,15 +206,6 @@ class App {
         }
     }
 
-    void AddRealtimeData() {
-        if (!CerboModbus::GetUnitsAreCreated()) {
-            return;
-        }
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
-    }
-
     void AddRealTimeUnitData(const ModbusUnit& targetUnit) {
         const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
         ImGui::Text(targetUnit.name.c_str());
@@ -230,6 +218,24 @@ class App {
         const ImVec2 spacing =
             ImVec2{ImGui::GetCursorPos().x, ImGui::GetCursorPos().y + 2 * ImGui::GetStyle().ItemSpacing.y};
         ImGui::SetCursorPos(spacing);
+    }
+
+    void PlotRealTimeData() {
+        if (!CerboModbus::GetUnitsAreCreated()) {
+            return;
+        }
+        if (ImGui::CollapsingHeader("System##0")) {
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
+        }
+        if (ImGui::CollapsingHeader("Akku##0")) {
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
+        }
+        if (ImGui::CollapsingHeader("VEBus##0")) {
+            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
+        }
     }
 
     void AddDataControls() {
@@ -376,8 +382,7 @@ class App {
         VisualizerInstance->PlotGraph();
 
         BeginWindow("Echtzeitdaten");
-        AddRealtimeData();
-        VisualizerInstance->PlotRealTimeData();
+        PlotRealTimeData();
 
         BeginWindow("Datenauswahl");
         AddDataControls();

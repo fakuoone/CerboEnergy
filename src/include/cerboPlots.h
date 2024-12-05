@@ -312,22 +312,25 @@ class Visualizer {
             ImU32 color = ImPlot::GetCurrentItem()->Color;
             size_t first{start + 1};
             size_t second{start};
+            ImVec2 startPos, endPos, xiSecStart, xiSecEnd;
             while (true) {
                 first = first % size;
                 second = second % size;
-                ImVec2 startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), yValues[second]);
-                ImVec2 endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), yValues[first]);
-                if (xValues[first] - xValues[second] < 20000) {
+                startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), yValues[second]);
+                endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), yValues[first]);
+                if (xValues[first] - xValues[second] <= 20) {
                     drawList->AddLine(startPos, endPos, color);
+                } else {
+                    uint16_t* a = 0;
                 }
                 if (withFill) {
-                    ImVec2 xiSecStart = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), 0);
-                    ImVec2 xiSecEnd = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), 0);
-                    std::array<ImVec2, 4> points{xiSecStart, startPos, xiSecEnd, endPos};
+                    xiSecStart = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), 0);
+                    xiSecEnd = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), 0);
+                    std::array<ImVec2, 4> points{xiSecStart, startPos, endPos, xiSecEnd};
                     if (startPos.y <= 0) {
                         std::reverse(points.begin(), points.end());
                     }
-                    uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
+                    constexpr uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
                     drawList->AddConvexPolyFilled(points.data(), 4, color & binaryMask);
                 }
 
@@ -344,7 +347,8 @@ class Visualizer {
     void PlotLineFromCircularBuffer(const std::string& plotName,
                                     const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer,
                                     const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const {
-        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), true);
+        PlotProperLineGraph(
+            plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), false);
     }
 
   public:
@@ -386,28 +390,20 @@ class Visualizer {
         }
     }
 
-    void PlotRealTimeData() const {
-        if (!CerboModbus::GetUnitsAreCreated()) {
-            return;
-        }
-        ImVec2 plotSize = ImGui::GetContentRegionAvail();
-        if (ImPlot::BeginPlot("Echtzeitdaten", plotSize)) {
-            PrepareUnitDataPlot();
-            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
-            PlotUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
-            ImPlot::EndPlot();
-        }
-    }
+    void PlotRealTimeData(ModbusTypes::Devices devEnum) const { PlotUnitData(CerboModbus::GetUnit(devEnum)); }
 
     void PlotUnitData(const ModbusUnit& targetUnit) const {
+        ImVec2 plotSize = ImGui::GetContentRegionAvail();
+        if (ImPlot::BeginPlot(targetUnit.name.c_str(), plotSize)) {
+            PrepareUnitDataPlot();
+            const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
 
-        const std::map<uint16_t, Register>& targetRegisters = targetUnit.GetRegisters();
-
-        for (const auto& [lId, lRegister] : targetRegisters) {
-            const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
-            const CircularBuffer<double, CIRC_BUFFER_SIZE>& valuesBuffer = lRegister.GetRTValues();
-            PlotLineFromCircularBuffer(lRegister.Name, timesBuffer, valuesBuffer);
+            for (const auto& [lId, lRegister] : targetRegisters) {
+                const CircularBuffer<size_t, CIRC_BUFFER_SIZE>& timesBuffer = lRegister.GetRTTimes();
+                const CircularBuffer<double, CIRC_BUFFER_SIZE>& valuesBuffer = lRegister.GetRTValues();
+                PlotLineFromCircularBuffer(lRegister.Name, timesBuffer, valuesBuffer);
+            }
+            ImPlot::EndPlot();
         }
     }
 

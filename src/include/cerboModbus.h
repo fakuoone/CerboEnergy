@@ -165,7 +165,7 @@ class CerboModbus {
     }
 
     static void ReadAll() {
-        if (connectionState >= ConnectionState::CONNECTED) {
+        if (connectionState >= ConnectionState::CONNECTED && readingActive) {
             for (auto& [unitEnum, unit] : units) {
                 unit.ReadRegisters(connection);
             }
