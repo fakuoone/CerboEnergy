@@ -8,7 +8,7 @@
 
 using namespace ModbusTypes;
 class Register {
-  private:
+   private:
     bool ToBeRead;
     bool ToBeSaved{true};
     int64_t TimeDeltaBetweenReads;
@@ -19,16 +19,13 @@ class Register {
     uint16_t regBuffer;
     std::string logMessage;
 
-  public:
+   public:
     const std::string Name;
     const uint16_t Address;
     const DataUnits Unit;
     const uint16_t Divisor;
 
-    Register(std::string cName, uint16_t cAddr, DataUnits cUnit, uint16_t cDiv, int64_t cTDelta)
-        : Name{cName}, Address{cAddr}, Unit{cUnit}, Divisor{cDiv}, TimeDeltaBetweenReads{cTDelta} {
-        ToBeRead = true;
-    };
+    Register(std::string cName, uint16_t cAddr, DataUnits cUnit, uint16_t cDiv, int64_t cTDelta) : Name{cName}, Address{cAddr}, Unit{cUnit}, Divisor{cDiv}, TimeDeltaBetweenReads{cTDelta} { ToBeRead = true; };
     ~Register() {}
 
     void MarkRegisterToBeRead() { ToBeRead = true; }
@@ -44,7 +41,7 @@ class Register {
                 logMessage = "Can't read registers: " + std::string{modbus_strerror(errno)};
                 CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
             } else {
-                Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
+                Result.Value = static_cast<double>(static_cast<int16_t>(regBuffer));  // Result.Value = (regBuffer & (1 << 15)) == 32768 ? -((regBuffer ^ 65535) + 1) : regBuffer;
                 Result.Value = Result.Value / Divisor;
                 Result.LastRefresh = now.ms;
                 Result.LastRefreshS = now.ms / 1000;
@@ -70,11 +67,11 @@ class Register {
 };
 
 class ModbusUnit {
-  private:
+   private:
     std::map<uint16_t, Register> registers;
     std::string logMessage;
 
-  public:
+   public:
     const uint16_t id;
     const std::string name;
     ModbusUnit(uint16_t cId, std::string cName) : id{cId}, name{cName} {};
@@ -95,7 +92,7 @@ class ModbusUnit {
 class CerboModbus {
     using State = ModbusTypes::ConnectionState;
 
-  private:
+   private:
     static inline std::string ipAdress{"192.168.178.110"};
     static inline uint16_t port{502};
     static inline modbus_t* connection = nullptr;
@@ -144,7 +141,7 @@ class CerboModbus {
         unitsCreated = true;
     }
 
-  public:
+   public:
     static void Connect() {
         bool temp;
         if (connection == nullptr) {
@@ -152,9 +149,7 @@ class CerboModbus {
         }
         if (temp) {
             if (modbus_connect(connection) == -1) {
-                logMessage = "Connection failed: " + std::string{modbus_strerror(errno)} +
-                             "\nIf no error is printed, check if target device is resposive at: " + ipAdress + ":" +
-                             std::to_string(port);
+                logMessage = "Connection failed: " + std::string{modbus_strerror(errno)} + "\nIf no error is printed, check if target device is resposive at: " + ipAdress + ":" + std::to_string(port);
                 CerboLog::AddEntry(logMessage, LogTypes::Categories::FAILURE);
                 modbus_free(connection);
                 return;

@@ -54,7 +54,7 @@ class Visualizer {
                         const PDTypes::DragDrop dropData = *static_cast<const PDTypes::DragDrop*>(payload->Data);
 
                         PDTypes::Entries& selectedEntry = ED.Daily.Es[SSHDataHandler::GetPlotKey(dropData.DataIndex)];
-                        AddPlot(0, ED.Daily.Times, selectedEntry.Values, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, dropData.DataIndex, selectedEntry.PlotInfo);
+                        AddPlot(0, ED.Daily.Times, selectedEntry, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, dropData.DataIndex);
                         CerboLog::AddEntry("Dropped TBD into the plot.", LogTypes::Categories::SUCCESS);
                     }
                 }
@@ -323,11 +323,10 @@ class Visualizer {
             SSHDataHandler::FormatData(ED, rawData);
             if (SSHDataHandler::DataAvailable()) {
                 const std::vector<int32_t>& xdata = ED.Daily.Times;
-                const std::vector<float>& ydata = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].Values;
                 PDTypes::IsInPlot& inPlotInfo = ED.Daily.Es[SSHDataHandler::GetPlotKey(1)].PlotInfo;
                 const int16_t& size = ED.Daily.Times.size();
                 SSHDataHandler::ComputeAnalytics(ED);
-                AddPlot(0, xdata, ydata, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1, inPlotInfo);
+                AddPlot(0, xdata, ED.Daily.Es[SSHDataHandler::GetPlotKey(1)], PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1);
             }
         }
     }
@@ -388,29 +387,41 @@ class Visualizer {
 
     void PrepareDropTarget(const PDTypes::DragDrop& DragSource) { DropTarget = DragSource; }
 
-    void AddPlot(const int16_t subPlotIndex, const std::vector<int32_t>& xdata, const std::vector<float>& ydata, PDTypes::PlotTypes type, PDTypes::DragSource dragSourceType, uint16_t dataIndex, PDTypes::IsInPlot& inPlotInfo) {
+    void AddPlot(const int16_t subPlotIndex, const std::vector<int32_t>& xdata, PDTypes::Entries& dataEntry, PDTypes::PlotTypes type, PDTypes::DragSource dragSourceType, uint16_t dataIndex) {
         const std::string pKey = SSHDataHandler::GetPlotKey(dataIndex);
         EntryInfo toAddInfo = EntryInfo{dataIndex, SSHDataHandler::GetPlotName(dataIndex), type, dragSourceType, ED.Daily.Es[pKey].AN};
-        PlotEntry toAddPlot = PlotEntry{std::move(toAddInfo), xdata, ydata};
+        PlotEntry toAddPlot = PlotEntry{std::move(toAddInfo), xdata, dataEntry.Values};
         if (SubPlots.size() == 0) {
             SubPlots.push_back(std::vector<PlotEntry>());
         }
         if (SubPlots.size() > subPlotIndex) {
+            dataEntry.PlotInfo.SubPlotIndex = subPlotIndex;
+            dataEntry.PlotInfo.PlotIndex = SubPlots[subPlotIndex].size();
+            dataEntry.PlotInfo.InPlot = true;
             SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
-            inPlotInfo.SubPlotIndex = subPlotIndex;
+            std::string resultText = "Addes plot " + toAddPlot.Info.Name;
+            CerboLog::AddEntry(resultText, LogTypes::Categories::SUCCESS);
         } else {
             assert(false && "Fix me");
-            SubPlots.resize(subPlotIndex + 1);
-            SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
-            inPlotInfo.SubPlotIndex = subPlotIndex;
         }
-        inPlotInfo.InPlot = true;
     }
 
     void RemovePlot(uint16_t subPlotIndex, uint16_t plotIndex, uint16_t dataIndex) {
+        // [0, 1, 2, 3, 4, 5] ->  Remove(.., 2, ..) -> [0, 1, 3, 4, 5]
         std::vector<PlotEntry>& entryRef = SubPlots.at(subPlotIndex);
         entryRef.erase(entryRef.begin() + plotIndex);
-        ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo.InPlot = false;
+        ED.Daily.Es[SSHDataHandler::GetPlotKey(dataIndex)].PlotInfo = PDTypes::IsInPlot();  // Reset info of deleted plot
+        for (size_t i = plotIndex; i < entryRef.size(); i++) {                              // Shift plotindezes of following plot entries
+            const uint16_t followindDindezes = SubPlots[subPlotIndex][i].Info.DataIndex;
+            PDTypes::Entries& dataEntry = ED.Daily.Es[SSHDataHandler::GetPlotKey(followindDindezes)];
+            if (dataEntry.PlotInfo.InPlot) {
+                dataEntry.PlotInfo.PlotIndex = i;
+                std::string resultText = "Shifted plot data of:  " + SSHDataHandler::GetPlotName(dataIndex);
+                CerboLog::AddEntry(SSHDataHandler::GetPlotName(i), LogTypes::Categories::SUCCESS);
+            }
+        }
+        std::string resultText = "Removed plot: " + SSHDataHandler::GetPlotName(dataIndex);
+        CerboLog::AddEntry(resultText, LogTypes::Categories::SUCCESS);
     }
 
     void TogglePlot(const uint16_t dataIndex, PDTypes::DragSource convType) {
@@ -420,7 +431,7 @@ class Visualizer {
         if (CheckPlotInSubplot(subPlotIndex, dataIndex, convType)) {
             RemovePlot(subPlotIndex, plotIndex, dataIndex);
         } else {
-            AddPlot(subPlotIndex, ED.Daily.Times, currEntry.Values, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, dataIndex, currEntry.PlotInfo);
+            AddPlot(subPlotIndex, ED.Daily.Times, currEntry, PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, dataIndex);
         }
     }
 
