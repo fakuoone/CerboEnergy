@@ -23,8 +23,6 @@ class Visualizer {
     PDTypes::DragDrop DropTarget;
 
     struct EntryInfo {
-        // uint16 is hella small for a size
-        uint16_t Size;
         uint16_t DataIndex;
         std::string Name;
         PDTypes::PlotTypes PlotType;
@@ -109,8 +107,7 @@ class Visualizer {
     void PlotInSubPlot(const PlotEntry& plotEntry) {
         switch (plotEntry.Info.PlotType) {
             case PDTypes::PlotTypes::BARS:
-                PlotProperBars(plotEntry.Info.Name, plotEntry.SourceX, plotEntry.SourceY, plotEntry.Info.Size, plotEntry.Info.Metrics);
-
+                PlotProperBars(plotEntry.Info.Name, plotEntry.SourceX, plotEntry.SourceY, plotEntry.Info.Metrics);
                 break;
             case PDTypes::PlotTypes::LINE:
                 break;
@@ -150,8 +147,10 @@ class Visualizer {
     }
 
     // Needs refactor
-    void PlotProperBars(std::string plotName, const std::vector<int32_t>& xdata, const std::vector<float>& ydata, int16_t count, PDTypes::BasicMetrics AN) {
+    void PlotProperBars(std::string plotName, const std::vector<int32_t>& xdata, const std::vector<float>& ydata, PDTypes::BasicMetrics AN) {
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
+        size_t count = xdata.size();
+        assert(count == ydata.size());
         if (ImPlot::BeginItem(plotName.c_str())) {
             PDTypes::BarHover hoverData = FindHoveredBar(xdata, ydata, count);
             ImU32 colorBasic = ImPlot::GetCurrentItem()->Color;
@@ -161,9 +160,6 @@ class Visualizer {
             const int32_t noShadingBars = 10;
             ImU32 color = colorBasic;
             float leftX, rightX;
-
-            assert(count >= xdata.size());
-            assert(count >= ydata.size());
 
             for (int32_t i = 0; i < count; ++i) {
                 hoverData.inBoundY&& hoverData.iHighL == i ? color = colorHighL : color = colorBasic;
@@ -394,7 +390,7 @@ class Visualizer {
 
     void AddPlot(const int16_t subPlotIndex, const std::vector<int32_t>& xdata, const std::vector<float>& ydata, PDTypes::PlotTypes type, PDTypes::DragSource dragSourceType, uint16_t dataIndex, PDTypes::IsInPlot& inPlotInfo) {
         const std::string pKey = SSHDataHandler::GetPlotKey(dataIndex);
-        EntryInfo toAddInfo = EntryInfo{xdata.size(), dataIndex, SSHDataHandler::GetPlotName(dataIndex), type, dragSourceType, ED.Daily.Es[pKey].AN};
+        EntryInfo toAddInfo = EntryInfo{dataIndex, SSHDataHandler::GetPlotName(dataIndex), type, dragSourceType, ED.Daily.Es[pKey].AN};
         PlotEntry toAddPlot = PlotEntry{std::move(toAddInfo), xdata, ydata};
         if (SubPlots.size() == 0) {
             SubPlots.push_back(std::vector<PlotEntry>());
