@@ -18,15 +18,7 @@ class SSHDataHandler {
   private:
     inline static PDTypes::HelperData CD{200};
     inline static std::map<uint16_t, std::string> KeyLookup;
-    const inline static std::map<std::string, std::string> KeyNameLookup = {{"timestamp", "Zeitstempel"},
-                                                                            {"wBatnegative", "Entladeenergie"},
-                                                                            {"wBatpositive", "Ladeenergie"},
-                                                                            {"wSolnegative", "Solarkonsum"},
-                                                                            {"wSolpositive", "Solarerzeugung"},
-                                                                            {"wGridnegative", "Einspeiseenergie"},
-                                                                            {"wGridpositive", "Netzbezug"},
-                                                                            {"wLoadnegative", "AC-Erzeuger"},
-                                                                            {"wLoadpositive", "Lasten"}};
+    const inline static std::map<std::string, std::string> KeyNameLookup = {{"timestamp", "Zeitstempel"}, {"wBatnegative", "Entladeenergie"}, {"wBatpositive", "Ladeenergie"}, {"wSolnegative", "Solarkonsum"}, {"wSolpositive", "Solarerzeugung"}, {"wGridnegative", "Einspeiseenergie"}, {"wGridpositive", "Netzbezug"}, {"wLoadnegative", "AC-Erzeuger"}, {"wLoadpositive", "Lasten"}};
 
   public:
     static void PHead(PDTypes::EnergyStruct& ED, const std::string& rawData) {
@@ -58,9 +50,7 @@ class SSHDataHandler {
         using namespace std; // this is lazy
         vector<float> emptyVector{};
 
-        if (CD.Progress < CD.HeaderEnd) {
-            PHead(ED, rawData);
-        }
+        if (CD.Progress < CD.HeaderEnd) { PHead(ED, rawData); }
 
         // Please use const, it makes it much easier for others to follow logic and data flow
         const uint16_t PreviousProgress = CD.Progress;
@@ -68,9 +58,7 @@ class SSHDataHandler {
 
         while (KeepConverting) {
             uint64_t NewRowEnd = rawData.find("\n", ++CD.Progress);
-            if (NewRowEnd == string::npos) {
-                NewRowEnd = CD.DataSize;
-            }
+            if (NewRowEnd == string::npos) { NewRowEnd = CD.DataSize; }
 
             string temp = rawData.substr(CD.Progress, NewRowEnd - CD.Progress);
             stringstream ss(temp);
@@ -109,9 +97,7 @@ class SSHDataHandler {
             CD.Progress += (NewRowEnd - CD.Progress);
             CD.AvgRowSize = (CD.Progress - CD.HeaderEnd) / CD.RowsConverted;
 
-            if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize) {
-                KeepConverting = false;
-            }
+            if ((CD.Progress - PreviousProgress + CD.AvgRowSize / 2) > CD.TargetChunkSize) { KeepConverting = false; }
 
             if (CD.Progress == CD.DataSize) {
                 KeepConverting = false;
@@ -155,6 +141,7 @@ class SSHDataHandler {
     static std::string GetPlotName(uint16_t iBar) { return KeyNameLookup.at(GetPlotKey(iBar)); }
 
     static std::string GetTopicName(uint16_t i) { return KeyNameLookup.at(KeyLookup[i]); }
+
     static uint16_t GetDataCategories() { return CD.DataCategories; }
 };
 
