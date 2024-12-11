@@ -271,16 +271,20 @@ class Visualizer {
     }
 
     // Can this function be used with vectors aswell?
-    template <size_t Sx, size_t Sy>
-    void PlotProperLineGraph(const std::string& plotName, const std::array<size_t, Sx>& xValues, const std::array<double, Sy>& yValues, size_t start, size_t end, bool withFill) const {
+    template <size_t S>
+    void PlotProperLineGraph(const std::string& plotName, const std::array<size_t, S>& xValues, const std::array<double, S>& yValues, size_t start, size_t end, bool withFill) const {
+        // There is a bug here where the polygon seems to have multiple points in the origin when the data is rising or when the line discontinued for a bit
         ImDrawList* drawList = ImPlot::GetPlotDrawList();
         const int32_t size = std::min(xValues.size(), yValues.size());
-
+        std::vector<ImVec2> shadedPolygon;
+        shadedPolygon.reserve(S + 2);
         if (size == 0) {
             return;
         }
         if (ImPlot::BeginItem(plotName.c_str())) {
-            ImU32 color = ImPlot::GetCurrentItem()->Color;
+            bool isFirstIteration{true};
+            const ImVec2 zeroInPixels = ImPlot::PlotToPixels(0, 0);
+            const ImU32 color = ImPlot::GetCurrentItem()->Color;
             size_t first{start + 1};
             size_t second{start};
             ImVec2 startPos, endPos, xiSecStart, xiSecEnd;
@@ -289,34 +293,44 @@ class Visualizer {
                 second = second % size;
                 startPos = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), yValues[second]);
                 endPos = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), yValues[first]);
+                if (isFirstIteration && withFill) {
+                    shadedPolygon.push_back(ImVec2{startPos.x, zeroInPixels.y});
+                    shadedPolygon.push_back(startPos);
+                }
                 if (xValues[first] - xValues[second] <= 20) {
-                    drawList->AddLine(startPos, endPos, color);
-                } else {
-                    uint16_t* a = 0;
-                }
-                if (withFill) {
-                    xiSecStart = ImPlot::PlotToPixels(static_cast<double>(xValues[second]), 0);
-                    xiSecEnd = ImPlot::PlotToPixels(static_cast<double>(xValues[first]), 0);
-                    std::array<ImVec2, 4> points{xiSecStart, startPos, endPos, xiSecEnd};
-                    if (startPos.y <= 0) {
-                        std::reverse(points.begin(), points.end());
+                    if (withFill) {
+                        if (shadedPolygon.back().y != startPos.y) {
+                            shadedPolygon.push_back(startPos);
+                        }
+                        shadedPolygon.push_back(endPos);
                     }
-                    constexpr uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
-                    drawList->AddConvexPolyFilled(points.data(), 4, color & binaryMask);
+                    drawList->AddLine(startPos, endPos, color);
+                } else if (withFill) {
+                    shadedPolygon.push_back(ImVec2{shadedPolygon.back().x, zeroInPixels.y});  // falling edge of the shaded area if line discontinues
+                    if (shadedPolygon.back().y != endPos.y) {
+                        shadedPolygon.push_back(ImVec2{endPos.x, zeroInPixels.y});  // rising edge of the shaded area if line continues
+                    }
                 }
-
                 if (first == end) {
+                    if (withFill) {
+                        shadedPolygon.push_back(ImVec2{endPos.x, zeroInPixels.y});
+                    }
                     break;
                 }
                 first++;
                 second++;
+                isFirstIteration = false;
+            }
+            if (withFill) {
+                constexpr uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
+                drawList->AddConvexPolyFilled(shadedPolygon.data(), shadedPolygon.size(), color & binaryMask);
             }
         }
     }
 
     template <size_t Sx, size_t Sy>
     void PlotLineFromCircularBuffer(const std::string& plotName, const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer, const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const {
-        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), false);
+        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), true);
     }
 
    public:
