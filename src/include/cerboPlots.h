@@ -2,6 +2,8 @@
 
 #include "cerboLogger.h"
 #include "dataHandler.h"
+#include "helperFunctions.h"
+
 #include "imgui.h"
 #include "implot.h"
 #include "implot_internal.h"
@@ -154,8 +156,8 @@ class Visualizer {
         if (ImPlot::BeginItem(plotName.c_str())) {
             PDTypes::BarHover hoverData = FindHoveredBar(xdata, ydata, count);
             ImU32 colorBasic = ImPlot::GetCurrentItem()->Color;
-            ImU32 colorHighL = ImPlot::GetCurrentItem()->Color;
-            ImU32 colorShade = ImPlot::GetCurrentItem()->Color;
+            ImU32 colorHighL = Colors::ChangeBrightness(ImGui::ColorConvertU32ToFloat4(colorBasic), 0.2);
+            ImU32 colorShade = Colors::ChangeBrightness(ImGui::ColorConvertU32ToFloat4(colorBasic), -0.2);
 
             const int32_t noShadingBars = 10;
             ImU32 color = colorBasic;

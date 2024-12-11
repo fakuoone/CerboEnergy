@@ -47,6 +47,7 @@ set(HEADERS ${CMAKE_SOURCE_DIR}/include/cerboGui.h
             ${CMAKE_SOURCE_DIR}/include/dataHandler.h
             ${CMAKE_SOURCE_DIR}/include/cerboSSH.h
             ${CMAKE_SOURCE_DIR}/include/cerboModbus.h
+            ${CMAKE_SOURCE_DIR}/include/helperFunctions.h
             ${CMAKE_SOURCE_DIR}/include/main.h)
 
 add_executable(SSHEnergy WIN32 ${SOURCES} ${HEADERS})
