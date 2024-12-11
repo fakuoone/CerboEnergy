@@ -40,8 +40,8 @@ class App {
         ImGui::SetNextWindowDockID(dockSpace);
     }
 
-    bool AddAppControlButton(const std::string& name, const bool enable, GUITypes::IconData icon, const bool isLastInRow, const float width, float& maxWindowWidth) {
-        if (AddButton(name, enable, icon, width)) {
+    bool AddAppControlButton(const std::string& name, const bool enable, GUITypes::IconData icon, const bool isLastInRow, const float width, const float height, float& maxWindowWidth) {
+        if (AddButton(name, enable, icon, width, height)) {
             return true;
         }
         if (!isLastInRow) {
@@ -51,10 +51,12 @@ class App {
         return false;
     }
 
-    bool AddButton(const std::string& name, const bool enable, GUITypes::IconData icon, float width) {
+    bool AddButton(const std::string& name, const bool enable, GUITypes::IconData icon, float width, float height) {
         ImGui::BeginDisabled(!enable);
-        width = width <= 2 ? (float)IconSize * width : width;  // use width both as scaling and abolute value
-        if (ImGui::ImageButton(name.c_str(), (ImTextureID)(intptr_t)icon.texturePtr, ImVec2(width, IconSize))) {
+        width = width <= 2 ? (float)IconSize * width : width;      // use width both as scaling and abolute value
+        height = height <= 2 ? (float)IconSize * height : height;  // use height both as scaling and abolute value
+
+        if (ImGui::ImageButton(name.c_str(), (ImTextureID)(intptr_t)icon.texturePtr, ImVec2(width, height))) {
             ImGui::EndDisabled();
             return true;
         }
@@ -62,7 +64,7 @@ class App {
         return false;
     }
 
-    void CreateAppControls() {
+    void AddAppControls() {
         GUITypes::IconData connectIcon = IconMap.at(GUITypes::IconVariants::CONNECT);
         GUITypes::IconData disConnectIcon = IconMap.at(GUITypes::IconVariants::DISCONNECT);
         GUITypes::IconData readIcon = IconMap.at(GUITypes::IconVariants::READ_DATA);
@@ -73,17 +75,17 @@ class App {
             someContentExpanded = true;
             if (ImGui::BeginTable("tableSSH", 3, 0)) {
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung aufbauen", CerboSSH::GetConnectionState() < SSHTypes::ConnectionState::CONNECTED, connectIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung aufbauen", CerboSSH::GetConnectionState() < SSHTypes::ConnectionState::CONNECTED, connectIcon, false, 1, 1, maxWidth)) {
                     CerboSSH::ConnectCerbo();
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Daten lesen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::CONNECTED, readIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Daten lesen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::CONNECTED, readIcon, false, 1, 1, maxWidth)) {
                     SSHDataHandler::ResetSSHData();
                     CerboSSH::ReadEnergyFile();
                     VisualizerInstance->GetData(CerboSSH::GetRawString());
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung trennen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::SESSION, disConnectIcon, true, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung trennen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::SESSION, disConnectIcon, true, 1, 1, maxWidth)) {
                     CerboSSH::DisconnectCerbo();
                 }
                 ImGui::EndTable();
@@ -94,17 +96,17 @@ class App {
             someContentExpanded = true;
             if (ImGui::BeginTable("tableModbus", 3, 0)) {
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung aufbauen##2", CerboModbus::GetConnectionState() < ModbusTypes::ConnectionState::CONNECTED, connectIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung aufbauen##2", CerboModbus::GetConnectionState() < ModbusTypes::ConnectionState::CONNECTED, connectIcon, false, 1, 1, maxWidth)) {
                     CerboModbus::Connect();
                 }
                 bool readingActive = CerboModbus::GetReadingActive();
                 const GUITypes::IconData modbusIcon = readingActive ? pauseIcon : readIcon;
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Daten lesen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, modbusIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Daten lesen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, modbusIcon, false, 1, 1, maxWidth)) {
                     CerboModbus::ToggleReadingActive();
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung trennen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, disConnectIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung trennen##2", CerboModbus::GetConnectionState() >= ModbusTypes::ConnectionState::CONNECTED, disConnectIcon, false, 1, 1, maxWidth)) {
                     CerboModbus::Disconnect();
                 }
                 ImGui::EndTable();
@@ -115,13 +117,13 @@ class App {
             someContentExpanded = true;
             if (ImGui::BeginTable("tableAPI", 3, 0)) {
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung aufbauen##3", true, connectIcon, false, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung aufbauen##3", true, connectIcon, false, 1, 1, maxWidth)) {
                     CerboVrm::Connect();
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Daten lesen##3", true, readIcon, false, 1, maxWidth)) {}
+                if (AddAppControlButton("Daten lesen##3", true, readIcon, false, 1, 1, maxWidth)) {}
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, false, 1, maxWidth)) {}
+                if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, false, 1, 1, maxWidth)) {}
                 ImGui::EndTable();
             }
             AddConnectionInfo(GUITypes::DataSource::API);
@@ -234,6 +236,7 @@ class App {
     }
 
     void AddDataControls() {
+        bool someContentExpanded{false};
         const GUITypes::IconData barIcon = IconMap.at(GUITypes::IconVariants::BAR);
         const GUITypes::IconData lineIcon = IconMap.at(GUITypes::IconVariants::LINE);
 
@@ -243,9 +246,11 @@ class App {
             for (uint16_t i = 0; i < dataCategories; i++) {
                 const std::string buttonName = SSHDataHandler::GetTopicName(i);
                 if (ImGui::TreeNode(buttonName.c_str())) {
-                    if (AddButton("RAW##" + std::to_string(i), true, barIcon, 1))
+                    someContentExpanded = true;
+                    if (AddButton("RAW##" + std::to_string(i), true, barIcon, 0.5, 0.5))
                         VisualizerInstance->TogglePlot(i, PDTypes::DragSource::SSHRAW);
-                    if (AddButton("LINE##" + std::to_string(i), true, lineIcon, 1))
+                    ImGui::SameLine();
+                    if (AddButton("LINE##" + std::to_string(i), true, lineIcon, 0.5, 0.5))
                         VisualizerInstance->TogglePlot(i, PDTypes::DragSource::SSHCOMPUTED);
                     ImGui::TreePop();
                     ImGui::Spacing();
@@ -254,9 +259,15 @@ class App {
         }
         if (ImGui::CollapsingHeader("API-Daten", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::TreeNode("Reserve")) {
+                someContentExpanded = true;
                 ImGui::TreePop();
                 ImGui::Spacing();
             }
+        }
+        ImGuiID dockNodeID = ImGui::GetWindowDockID();
+        if (dockNodeID != 0 && someContentExpanded) {
+            float height = ImGui::DockBuilderGetNode(dockNodeID)->Size.y;
+            ImGui::DockBuilderSetNodeSize(dockNodeID, ImVec2(200, height));
         }
     }
 
@@ -298,9 +309,12 @@ class App {
         CreateDockSpace();
         windowCount = 0;
 
-        BeginWindow("App");
-        BeginWindow("Steuerung", ImGuiWindowFlags_AlwaysAutoResize);
-        CreateAppControls();
+        ImGuiWindowFlags mainFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        mainFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBackground;
+        BeginWindow("App", mainFlags);
+
+        BeginWindow("Steuerung");
+        AddAppControls();
         VisualizerInstance->GetData(CerboSSH::GetRawString());
 
         BeginWindow("Graph");
@@ -309,7 +323,7 @@ class App {
         BeginWindow("Echtzeitdaten");
         PlotRealTimeData();
 
-        BeginWindow("Datenauswahl");
+        BeginWindow("Datenauswahl", ImGuiWindowFlags_NoResize);
         AddDataControls();
 
         BeginWindow("Logger");

@@ -42,6 +42,7 @@ class Visualizer {
 
     std::vector<std::vector<PlotEntry>> SubPlots;
     PDTypes::EnergyStruct ED;
+    const float relativeInsidePadding = 0.05;
 
     void ReceiveDragDropTarget(PDTypes::EnergyStruct& ED, const char* dropType, const std::vector<PlotEntry>& plotEntries) {
         // dropData muss mehr Informationen beinhalten!
@@ -96,7 +97,9 @@ class Visualizer {
         ImPlot::SetupAxes("Zeit", "kWh", ImPlotAxisFlags_NoGridLines, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoGridLines);
         ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-        ImPlot::SetupAxisLimits(ImAxis_Y1, plotExtremes.ymin, plotExtremes.ymax, ImPlotCond_Always);
+        float paddedMin = plotExtremes.ymin - relativeInsidePadding * (plotExtremes.ymax - plotExtremes.ymin);
+        float paddedMax = plotExtremes.ymax + relativeInsidePadding * (plotExtremes.ymax - plotExtremes.ymin);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, paddedMin, paddedMax, ImPlotCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plotExtremes.xmin, plotExtremes.xmax);
         ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 86400, plotExtremes.xmax - plotExtremes.xmin);
@@ -400,9 +403,9 @@ class Visualizer {
             dataEntry.PlotInfo.SubPlotIndex = subPlotIndex;
             dataEntry.PlotInfo.PlotIndex = SubPlots[subPlotIndex].size();
             dataEntry.PlotInfo.InPlot = true;
-            SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
-            std::string resultText = "Addes plot " + toAddPlot.Info.Name;
+            std::string resultText = "Added plot " + toAddPlot.Info.Name;
             CerboLog::AddEntry(resultText, LogTypes::Categories::SUCCESS);
+            SubPlots[subPlotIndex].push_back(std::move(toAddPlot));
         } else {
             assert(false && "Fix me");
         }
