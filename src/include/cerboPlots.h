@@ -270,6 +270,11 @@ class Visualizer {
         ImPlot::TagX(xTag, ImVec4(1, 0, 0, 1), buffer);
     }
 
+    void UpdateBarSummary(const PlotEntry& entry, size_t startIndex, size_t endIndex) {
+        const PDTypes::Entries dataRef = ED.Daily.Es.at(SSHDataHandler::GetPlotKey(entry.Info.DataIndex));
+        // TBD
+    }
+
     // Can this function be used with vectors aswell?
     template <size_t S>
     void PlotProperLineGraph(const std::string& plotName, const std::array<size_t, S>& xValues, const std::array<double, S>& yValues, size_t start, size_t end, bool withFill) const {
@@ -283,6 +288,7 @@ class Visualizer {
         }
         if (ImPlot::BeginItem(plotName.c_str())) {
             bool isFirstIteration{true};
+            bool inDataHole{false};
             const ImVec2 zeroInPixels = ImPlot::PlotToPixels(0, 0);
             const ImU32 color = ImPlot::GetCurrentItem()->Color;
             size_t first{start + 1};
@@ -297,20 +303,26 @@ class Visualizer {
                     shadedPolygon.push_back(ImVec2{startPos.x, zeroInPixels.y});
                     shadedPolygon.push_back(startPos);
                 }
-                if (xValues[first] - xValues[second] <= 20) {
-                    if (withFill) {
-                        if (shadedPolygon.back().y != startPos.y) {
+                if (xValues[first] - xValues[second] <= 20) {  // DATA is continuos
+                    if (inDataHole) {                          // Exiting data hole
+                        if (withFill) {
+                            shadedPolygon.push_back(ImVec2{startPos.x, zeroInPixels.y});
                             shadedPolygon.push_back(startPos);
                         }
-                        shadedPolygon.push_back(endPos);
                     }
+                    shadedPolygon.push_back(endPos);
+                    inDataHole = false;
                     drawList->AddLine(startPos, endPos, color);
-                } else if (withFill) {
-                    shadedPolygon.push_back(ImVec2{shadedPolygon.back().x, zeroInPixels.y});  // falling edge of the shaded area if line discontinues
-                    if (shadedPolygon.back().y != endPos.y) {
-                        shadedPolygon.push_back(ImVec2{endPos.x, zeroInPixels.y});  // rising edge of the shaded area if line continues
+                } else {
+                    if (!inDataHole) {  // Entering data hole
+                        if (withFill) {
+                            shadedPolygon.push_back(endPos);
+                            shadedPolygon.push_back(ImVec2{endPos.x, zeroInPixels.y});
+                        }
                     }
+                    inDataHole = true;
                 }
+
                 if (first == end) {
                     if (withFill) {
                         shadedPolygon.push_back(ImVec2{endPos.x, zeroInPixels.y});
@@ -323,7 +335,7 @@ class Visualizer {
             }
             if (withFill) {
                 constexpr uint32_t binaryMask = (128 << 24) | 0b111111111111111111111111;
-                drawList->AddConvexPolyFilled(shadedPolygon.data(), shadedPolygon.size(), color & binaryMask);
+                drawList->AddConcavePolyFilled(shadedPolygon.data(), shadedPolygon.size(), color & binaryMask);
             }
         }
     }
@@ -364,6 +376,7 @@ class Visualizer {
 
                 for (PlotEntry Plot : SubPlot) {
                     PlotInSubPlot(Plot);
+                    // UpdateBarSummary();
                 }
                 FinishingTouches(SubPlot);
             }

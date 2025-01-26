@@ -187,6 +187,26 @@ class App {
         ImGui::ProgressBar(progress);
     }
 
+    void DisplayLogs(std::vector<LogTypes::Log>& logs) {
+        for (auto it = logs.crbegin(); it != logs.crend(); ++it) {
+            const auto current_log = *it;
+
+            ImGui::Text(current_log.Timestamp.c_str());
+            ImGui::SameLine();
+
+            if (current_log.Category == LogTypes::Categories::SUCCESS) {
+                ImGui::Text("SUCC");
+            } else if (current_log.Category == LogTypes::Categories::FAILURE) {
+                ImGui::Text("FAIL");
+            } else {
+                assert(current_log.Category == LogTypes::Categories::INFORMATION);
+                ImGui::Text("INFO");
+            }
+            ImGui::SameLine();
+            ImGui::TextWrapped(current_log.Message.c_str());
+        }
+    }
+
     void AddLoggerControls() {
         ImVec2 windowPos = ImGui::GetWindowPos();
         ImVec2 windowSize = ImGui::GetWindowSize();
@@ -221,18 +241,28 @@ class App {
         if (!CerboModbus::GetUnitsAreCreated()) {
             return;
         }
-        if (ImGui::CollapsingHeader("System##0")) {
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
+        if (ImGui::BeginTabBar("ImPlotDemoTabs")) {
+            if (ImGui::BeginTabItem("System##")) {
+                AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+                ImGui::PushClipRect(ImGui::GetCursorScreenPos(), ImGui::GetContentRegionMax(), true);
+                VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
+                ImGui::PopClipRect();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Akku##0")) {
+                AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+                VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("VEBus##0")) {
+                AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+                VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
         }
-        if (ImGui::CollapsingHeader("Akku##0")) {
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
-            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
-        }
-        if (ImGui::CollapsingHeader("VEBus##0")) {
-            AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
-            VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
-        }
+        ImGui::ShowDemoWindow();
+        ImGui::ShowMetricsWindow();
     }
 
     void AddDataControls() {
@@ -327,7 +357,8 @@ class App {
         AddDataControls();
 
         BeginWindow("Logger");
-        CerboLog::DisplayLogs();
+
+        DisplayLogs(CerboLog::GetLogs());
         AddLoggerControls();
 
         EndWindows();

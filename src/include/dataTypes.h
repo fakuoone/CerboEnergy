@@ -12,6 +12,27 @@
 
 #define CIRC_BUFFER_SIZE 5000
 
+namespace LogTypes {
+enum class Categories { SUCCESS, FAILURE, INFORMATION };
+
+struct Log {
+    std::string Timestamp{};
+    std::string Message{};
+    Categories Category{};
+};
+}  // namespace LogTypes
+
+namespace TimingTypes {
+typedef int64_t milliseconds;
+struct TimeStruct {
+    std::string msString;
+    milliseconds ms;
+
+    // I don't like ctor for struct with all public members. Use init lists instead
+    TimeStruct(std::string cMsString, int64_t cMs) : msString{cMsString}, ms{cMs} {}
+};
+}  // namespace TimingTypes
+
 namespace GUITypes {
 enum class IconVariants { CONNECT, READ_DATA, DISCONNECT, BAR, LINE, PAUSE };
 
@@ -27,15 +48,11 @@ struct IconData {
 };
 
 const std::unordered_map<uint16_t, Icon> IconLookUp{
-    {0, Icon{IconVariants::CONNECT, "/ressource/icons/connect.png"}},
-    {1, Icon{IconVariants::READ_DATA, "/ressource/icons/readdata.png"}},
-    {2, Icon{IconVariants::DISCONNECT, "/ressource/icons/disconnect.png"}},
-    {3, Icon{IconVariants::BAR, "/ressource/icons/bar.png"}},
-    {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},
-    {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}};
+    {0, Icon{IconVariants::CONNECT, "/ressource/icons/connect.png"}}, {1, Icon{IconVariants::READ_DATA, "/ressource/icons/readdata.png"}}, {2, Icon{IconVariants::DISCONNECT, "/ressource/icons/disconnect.png"}},
+    {3, Icon{IconVariants::BAR, "/ressource/icons/bar.png"}},         {4, Icon{IconVariants::LINE, "/ressource/icons/line.png"}},          {5, Icon{IconVariants::PAUSE, "/ressource/icons/pause.png"}}};
 
 enum class DataSource { SSH, API, MODBUS };
-} // namespace GUITypes
+}  // namespace GUITypes
 
 namespace PDTypes {
 static constexpr uint16_t noDragSourceTypes = 4;
@@ -46,13 +63,9 @@ enum class DragSource {
     MODBUS,
 };
 
-const std::map<uint16_t, DragSource> DragSourceNumberMap = {
-    {0, DragSource::SSHRAW}, {1, DragSource::SSHCOMPUTED}, {2, DragSource::API}, {3, DragSource::MODBUS}};
+const std::map<uint16_t, DragSource> DragSourceNumberMap = {{0, DragSource::SSHRAW}, {1, DragSource::SSHCOMPUTED}, {2, DragSource::API}, {3, DragSource::MODBUS}};
 
-const std::map<DragSource, std::string> DragSourceMap = {{DragSource::SSHRAW, "SSHRAW"},
-                                                         {DragSource::SSHRAW, "SSHCOMPUTED"},
-                                                         {DragSource::API, "API"},
-                                                         {DragSource::MODBUS, "MOD"}};
+const std::map<DragSource, std::string> DragSourceMap = {{DragSource::SSHRAW, "SSHRAW"}, {DragSource::SSHRAW, "SSHCOMPUTED"}, {DragSource::API, "API"}, {DragSource::MODBUS, "MOD"}};
 
 struct DataInPlot {
     std::unordered_map<DragSource, bool> map;
@@ -129,111 +142,64 @@ struct IsInPlot {
 };
 
 struct Entries {
+    struct TimeSpanSummary {
+        TimingTypes::milliseconds start;
+        TimingTypes::milliseconds end;
+        double avg;
+        double max;
+        double min;
+        double sum;
+    };
     std::vector<float> Values;
     IsInPlot PlotInfo;
     BasicMetrics AN;
-    Entries() {
-        Values.clear(); // <- This is completely useless, Values is not even initialized here.
-        AN = BasicMetrics();
-    }
+    TimeSpanSummary Summary;
+    Entries() : AN{} {}
 };
 
 struct EnergyStruct {
     struct DailyData {
         std::unordered_map<std::string, Entries> Es;
         std::vector<int32_t> Times;
-        DailyData() {
-            Es.clear();    // useless, instead initialize members
-            Times.clear(); // useless, instead initialize members
-        }
     };
     struct VRMData {
         int16_t a{0};
     };
     DailyData Daily;
     VRMData VRM;
-
-    EnergyStruct() {
-        // use initializer list or member inits instead
-        Daily = DailyData();
-        VRM = VRMData();
-    }
 };
-} // namespace PDTypes
-
-namespace LogTypes {
-enum class Categories { SUCCESS, FAILURE, INFORMATION };
-
-struct Log {
-    std::string Timestamp{};
-    std::string Message{};
-    Categories Category{};
-};
-} // namespace LogTypes
-
-namespace TimingTypes {
-struct TimeStruct {
-    std::string msString;
-    int64_t ms;
-
-    // I don't like ctor for struct with all public members. Use init lists instead
-    TimeStruct(std::string cMsString, int64_t cMs) : msString{cMsString}, ms{cMs} {}
-};
-} // namespace TimingTypes
+}  // namespace PDTypes
 
 namespace SSHTypes {
-enum ConnectionState {
-    OFFLINE,
-    SESSION,
-    CONNECTED,
-    AUTHENTICATED,
-    CHANNEL,
-    CHANNEL_SESSION,
-    EXECUTED_CMD,
-    READ_RESULT
-};
+enum ConnectionState { OFFLINE, SESSION, CONNECTED, AUTHENTICATED, CHANNEL, CHANNEL_SESSION, EXECUTED_CMD, READ_RESULT };
 
 enum class ComparisonType { GR, GREQ, EQ, INEQ, SMEQ, SM };
 
-const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
-                                                                   {ConnectionState::SESSION, 1},
-                                                                   {ConnectionState::CONNECTED, 2},
-                                                                   {ConnectionState::AUTHENTICATED, 3},
-                                                                   {ConnectionState::CHANNEL, 4},
-                                                                   {ConnectionState::CHANNEL_SESSION, 5},
-                                                                   {ConnectionState::EXECUTED_CMD, 6},
-                                                                   {ConnectionState::READ_RESULT, 7}};
-} // namespace SSHTypes
+const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0}, {ConnectionState::SESSION, 1},         {ConnectionState::CONNECTED, 2},    {ConnectionState::AUTHENTICATED, 3},
+                                                                   {ConnectionState::CHANNEL, 4}, {ConnectionState::CHANNEL_SESSION, 5}, {ConnectionState::EXECUTED_CMD, 6}, {ConnectionState::READ_RESULT, 7}};
+}  // namespace SSHTypes
 
 namespace ModbusTypes {
 enum ConnectionState { OFFLINE, SESSION, CONNECTED, AUTHENTICATED, EXECUTED_CMD, READ_RESULT };
 
-const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},
-                                                                   {ConnectionState::SESSION, 1},
-                                                                   {ConnectionState::CONNECTED, 2},
-                                                                   {ConnectionState::AUTHENTICATED, 3},
-                                                                   {ConnectionState::EXECUTED_CMD, 4},
-                                                                   {ConnectionState::READ_RESULT, 5}};
+const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},       {ConnectionState::SESSION, 1},      {ConnectionState::CONNECTED, 2},
+                                                                   {ConnectionState::AUTHENTICATED, 3}, {ConnectionState::EXECUTED_CMD, 4}, {ConnectionState::READ_RESULT, 5}};
 
 enum class Devices { SYSTEM, BATTERY, VEBUS };
 
 enum class DataUnits { WATT, KILOWATT, DEGREE_C, VOLT, AMPERE, PERCENT };
 
-const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT, "W"},
-                                                                {DataUnits::KILOWATT, "kW"},
-                                                                {DataUnits::DEGREE_C, "°C"},
-                                                                {DataUnits::VOLT, "V"},
-                                                                {DataUnits::AMPERE, "A"},
-                                                                {DataUnits::PERCENT, "%%"}};
+const std::unordered_map<DataUnits, std::string> DataUnitLookup{{DataUnits::WATT, "W"}, {DataUnits::KILOWATT, "kW"}, {DataUnits::DEGREE_C, "°C"}, {DataUnits::VOLT, "V"}, {DataUnits::AMPERE, "A"}, {DataUnits::PERCENT, "%%"}};
 
 struct RegisterResult {
-    int64_t LastRefresh{0}; // Without this, things break because of uninitialized value??
+    int64_t LastRefresh{0};  // Without this, things break because of uninitialized value??
     int32_t LastRefreshS{0};
     double Value{0};
 };
 
-template <typename T, size_t Size> class CircularBuffer {
-  private:
+template <typename T, size_t Size>
+class CircularBuffer {
+   private:
     std::array<T, Size> Data;
     size_t Head{0};
     size_t Tail{0};
@@ -243,8 +209,8 @@ template <typename T, size_t Size> class CircularBuffer {
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = int;
-        using pointer = int*;   // or also value_type*
-        using reference = int&; // or also value_type&
+        using pointer = int*;    // or also value_type*
+        using reference = int&;  // or also value_type&
         Iterator(pointer ptr) : m_ptr{ptr} {}
         reference operator*() const { return *m_ptr; }
         pointer operator->() { return m_ptr; }
@@ -256,14 +222,14 @@ template <typename T, size_t Size> class CircularBuffer {
         friend bool operator==(const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; };
         friend bool operator!=(const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; };
 
-      private:
+       private:
         pointer m_ptr;
     };
 
     Iterator begin() { return Iterator{&Data[Tail]}; }
     Iterator end() { return Iterator{&Data[Head]}; }
 
-  public:
+   public:
     void AppendData(const T& _data) {
         if (Started) {
             Head = (Head + 1) % Size;
@@ -285,4 +251,4 @@ template <typename T, size_t Size> class CircularBuffer {
 
     const size_t GetTail() const { return Tail; }
 };
-} // namespace ModbusTypes
+}  // namespace ModbusTypes
