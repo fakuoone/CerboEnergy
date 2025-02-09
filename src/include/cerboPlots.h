@@ -342,7 +342,7 @@ class Visualizer {
 
     template <size_t Sx, size_t Sy>
     void PlotLineFromCircularBuffer(const std::string& plotName, const ModbusTypes::CircularBuffer<size_t, Sx>& xBuffer, const ModbusTypes::CircularBuffer<double, Sy>& yBuffer) const {
-        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), true);
+        PlotProperLineGraph(plotName, xBuffer.GetData(), yBuffer.GetData(), xBuffer.GetTail(), xBuffer.GetHead(), false);
     }
 
    public:

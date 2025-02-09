@@ -241,28 +241,44 @@ class App {
         if (!CerboModbus::GetUnitsAreCreated()) {
             return;
         }
-        if (ImGui::BeginTabBar("ImPlotDemoTabs")) {
-            if (ImGui::BeginTabItem("System##")) {
+        if (ImGui::BeginTabBar("RealTimeData")) {
+            if (ImGui::BeginTabItem("Systemdaten")) {
+                ImGui::BeginChild("Systemdaten");
                 AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-                ImGui::PushClipRect(ImGui::GetCursorScreenPos(), ImGui::GetContentRegionMax(), true);
                 VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
-                ImGui::PopClipRect();
+                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Akku##0")) {
+            if (ImGui::BeginTabItem("Batteriedaten")) {
+                ImGui::BeginChild("Batteriedaten");
                 AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
                 VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
+                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("VEBus##0")) {
+            if (ImGui::BeginTabItem("VE-Bus-Daten")) {
+                ImGui::BeginChild("VE-Bus-Daten");
                 AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
                 VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
+                ImGui::EndChild();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
-        }
-        ImGui::ShowDemoWindow();
-        ImGui::ShowMetricsWindow();
+        } /* 
+        ImGui::BeginChild("Systemdaten");
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
+        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
+        ImGui::EndChild();
+
+        ImGui::BeginChild("Batteriedaten");
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
+        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
+        ImGui::EndChild();
+        
+        ImGui::BeginChild("VE-Bus-Daten");
+        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
+        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
+        ImGui::EndChild(); */
     }
 
     void AddDataControls() {
@@ -310,6 +326,11 @@ class App {
         for (size_t i = 0; i < windowCount; i++) {
             ImGui::End();
         }
+    }
+
+    void EndSingleWindow() {
+        windowCount--;
+        ImGui::End();
     }
 
     void LoadIcons() {
