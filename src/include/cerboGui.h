@@ -264,21 +264,7 @@ class App {
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
-        } /* 
-        ImGui::BeginChild("Systemdaten");
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::SYSTEM));
-        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::SYSTEM);
-        ImGui::EndChild();
-
-        ImGui::BeginChild("Batteriedaten");
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
-        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::BATTERY);
-        ImGui::EndChild();
-        
-        ImGui::BeginChild("VE-Bus-Daten");
-        AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::VEBUS));
-        VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::VEBUS);
-        ImGui::EndChild(); */
+        }
     }
 
     void AddDataControls() {
