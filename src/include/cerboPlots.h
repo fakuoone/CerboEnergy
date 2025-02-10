@@ -496,6 +496,13 @@ class Visualizer {
 
     uint16_t GetSubPlotCount() const { return SubPlots.size(); }
 
+    TimingTypes::TimeStruct GetFirstTime() const {
+        if (SSHDataHandler::DataAvailable()) {
+            return Timing::GetTimeFromSeconds(ED.Daily.Times[0]);
+        }
+        return Timing::GetTimeFromSeconds(946681200);  // 2000-01-01 00:00:00
+    }
+
     void ResetData() {
         DropTarget = PDTypes::DragDrop{"", 0};
         ED = PDTypes::EnergyStruct();

@@ -18,10 +18,21 @@ TimingTypes::TimeStruct GetTimeNow() {  // Timestamp has bugs
     std::tm tm = *std::localtime(&nowTimeT);
 
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%H:%M:%S");                          // Format time as HH:MM:SS
-    oss << ":" << std::setfill('0') << std::setw(3) << ms.count();  // Append milliseconds
+    oss << std::put_time(&tm, "%H:%M:%S");                                // Format time as HH:MM:SS
+    oss << ":" << std::setfill('0') << std::setw(3) << ms.count() % 100;  // Append milliseconds
 
     return TimingTypes::TimeStruct{oss.str(), ms.count()};
+}
+
+TimingTypes::TimeStruct GetTimeFromSeconds(int32_t seconds) {
+    time_t nowTimeT = static_cast<time_t>(seconds);
+    std::tm tm = *std::localtime(&nowTimeT);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%H:%M:%S");            // Format time as HH:MM:SS
+    oss << ":" << std::setfill('0') << std::setw(3);  // Append milliseconds
+
+    return TimingTypes::TimeStruct{oss.str(), seconds * 1000};
 }
 }  // namespace Timing
 

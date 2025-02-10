@@ -121,9 +121,13 @@ class App {
                     CerboVrm::Connect();
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Daten lesen##3", true, readIcon, false, 1, 1, maxWidth)) {}
+                if (AddAppControlButton("Daten lesen##3", SSHDataHandler::DataAvailable(), readIcon, false, 1, 1, maxWidth)) {
+                    CerboVrm::GetData(VisualizerInstance->GetFirstTime(), Timing::GetTimeNow());
+                }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, false, 1, 1, maxWidth)) {}
+                if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, false, 1, 1, maxWidth)) {
+                    CerboVrm::Disconnect();
+                }
                 ImGui::EndTable();
             }
             AddConnectionInfo(GUITypes::DataSource::API);
