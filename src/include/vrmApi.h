@@ -3,6 +3,7 @@
 #include "cerboLogger.h"
 
 #include <curl/curl.h>
+#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <string>
@@ -13,17 +14,13 @@ class CerboVrm {
     static inline CURL* curl;
     static inline CURLcode res;
     static inline std::string responseString;
+    static inline nlohmann::json responseJson;
 
-    struct UserValues {
-        std::string userName;
-        std::string password;
-        int64_t siteID;
-    };
+    static inline ApiTypes::UserValues login;
+    static inline ApiTypes::ConnectionState connectionState{ApiTypes::ConnectionState::OFFLINE};
 
-    static inline UserValues login;
-
-    static UserValues ReadUserValues() {
-        UserValues login;
+    static ApiTypes::UserValues ReadUserValues() {
+        ApiTypes::UserValues login;
         std::string filename = "B:/Programmieren/C/CerboEnergy/doc/passwordApi.txt";
         std::ifstream loginStream(filename);
         std::string temp;
@@ -51,12 +48,38 @@ class CerboVrm {
         return returnString;
     }
 
+    static bool ParseToken() {
+        responseJson = nlohmann::json::parse(responseString);
+        if (responseJson.contains("token")) {
+            login.token = responseJson["token"];
+            return true;
+        }
+        return false;
+    }
+
+    static bool ParseData() {
+        responseJson = nlohmann::json::parse(responseString);
+        return false;
+    }
+
     static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
         size_t totalSize = size * nmemb;
         s->append(static_cast<char*>(contents), totalSize);
+        switch (connectionState) {
+            case ApiTypes::ConnectionState::AUTHENTICATING:
+                if (ParseToken()) {
+                    connectionState = ApiTypes::ConnectionState::AUTHENTICATED;
+                }
+                break;
+            case ApiTypes::ConnectionState::REQUESTING:
+                if (ParseData()) {
+                    connectionState = ApiTypes::ConnectionState::DATA_RECEIVED;
+                }
+                break;
+            default:
+                break;
+        }
         return totalSize;
-        // TBD: Abhängig vom aktuellen Zustand muss hier der responseString ausgewertet werden
-        // 1. TOKEN speichern und für spätere Anfragen verwenden
     }
 
    public:
@@ -64,6 +87,7 @@ class CerboVrm {
         curl = curl_easy_init();
         if (curl) {
             login = ReadUserValues();
+            connectionState = ApiTypes::ConnectionState::AUTHENTICATING;
             curl_easy_setopt(curl, CURLOPT_URL, "https://vrmapi.victronenergy.com/v2/auth/login");
             curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_3);
 
@@ -83,18 +107,30 @@ class CerboVrm {
                 curl_easy_cleanup(curl);
                 return;
             }
+            connectionState = ApiTypes::ConnectionState::AUTHENTICATED;
             CerboLog::AddEntry("Successfully logged in.", LogTypes::Categories::SUCCESS);
         }
     }
 
     static void GetData(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
+        connectionState = ApiTypes::ConnectionState::REQUESTING;
         const std::string url = formatUrl(start, end);
         const std::string messageString = "Attempting to connect via: " + url;
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         CerboLog::AddEntry(messageString, LogTypes::Categories::INFORMATION);
         CURLcode ret = curl_easy_perform(curl);
+        if (ret != CURLE_OK) {
+            CerboLog::AddEntry("Error getting data.", LogTypes::Categories::FAILURE);
+            return;
+        }
+        connectionState = ApiTypes::ConnectionState::DATA_RECEIVED;
     }
 
-    static void Disconnect() { curl_easy_cleanup(curl); }
+    static ApiTypes::ConnectionState GetConnectionState() { return connectionState; }
+
+    static void Disconnect() {
+        curl_easy_cleanup(curl);
+        connectionState = ApiTypes::ConnectionState::OFFLINE;
+    }
 };

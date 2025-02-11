@@ -252,3 +252,14 @@ class CircularBuffer {
     const size_t GetTail() const { return Tail; }
 };
 }  // namespace ModbusTypes
+
+namespace ApiTypes {
+struct UserValues {
+    std::string userName;
+    std::string password;
+    int64_t siteID;
+    std::string token;
+};
+
+enum ConnectionState { OFFLINE, AUTHENTICATING, AUTHENTICATED, REQUESTING, DATA_RECEIVED };
+}  // namespace ApiTypes

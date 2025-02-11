@@ -101,6 +101,8 @@ find_package(CURL REQUIRED)
 find_package(libmodbus CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 
+find_package(nlohmann_json CONFIG REQUIRED)
+
 target_link_libraries(SSHEnergy PRIVATE OpenSSL::SSL)
 target_link_libraries(SSHEnergy PRIVATE OpenSSL::Crypto)
 target_link_libraries(SSHEnergy PRIVATE ws2_32) 
@@ -110,6 +112,7 @@ target_link_libraries(SSHEnergy PRIVATE ssh)
 
 target_link_libraries(SSHEnergy PRIVATE CURL::libcurl)
 target_link_libraries(SSHEnergy PRIVATE modbus)
+target_link_libraries(SSHEnergy PRIVATE nlohmann_json::nlohmann_json)
 
 target_link_libraries(SSHEnergy PRIVATE imgui)
 target_link_libraries(SSHEnergy PRIVATE implot)

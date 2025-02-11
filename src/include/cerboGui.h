@@ -121,7 +121,8 @@ class App {
                     CerboVrm::Connect();
                 }
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Daten lesen##3", SSHDataHandler::DataAvailable(), readIcon, false, 1, 1, maxWidth)) {
+                const bool enableRead = CerboVrm::GetConnectionState() >= ApiTypes::ConnectionState::AUTHENTICATED && SSHDataHandler::DataAvailable();
+                if (AddAppControlButton("Daten lesen##3", enableRead, readIcon, false, 1, 1, maxWidth)) {
                     CerboVrm::GetData(VisualizerInstance->GetFirstTime(), Timing::GetTimeNow());
                 }
                 ImGui::TableNextColumn();
