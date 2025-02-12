@@ -2,6 +2,8 @@
 
 #include "imgui.h"
 
+#include <nlohmann/json.hpp>
+
 #include <d3d11.h>
 #include <map>
 #include <numeric>
@@ -254,12 +256,27 @@ class CircularBuffer {
 }  // namespace ModbusTypes
 
 namespace ApiTypes {
-struct UserValues {
+struct LoginData {
     std::string userName;
     std::string password;
-    int64_t siteID;
     std::string token;
+    int64_t siteID;
+};
+
+struct ResponseInfo {
+    bool success;
+    std::string errors;
+    uint16_t errorCode;
 };
 
 enum ConnectionState { OFFLINE, AUTHENTICATING, AUTHENTICATED, REQUESTING, DATA_RECEIVED };
+
+struct ConnectionData {
+    LoginData login;
+    ResponseInfo responseInfo;
+    std::string responseString;
+    nlohmann::json responseJson;
+    ConnectionState state;
+};
+
 }  // namespace ApiTypes

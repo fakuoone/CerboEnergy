@@ -117,7 +117,7 @@ class App {
             someContentExpanded = true;
             if (ImGui::BeginTable("tableAPI", 3, 0)) {
                 ImGui::TableNextColumn();
-                if (AddAppControlButton("Verbindung aufbauen##3", true, connectIcon, false, 1, 1, maxWidth)) {
+                if (AddAppControlButton("Verbindung aufbauen##3", CerboVrm::GetConnectionState() <= ApiTypes::ConnectionState::AUTHENTICATING, connectIcon, false, 1, 1, maxWidth)) {
                     CerboVrm::Connect();
                 }
                 ImGui::TableNextColumn();

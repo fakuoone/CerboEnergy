@@ -13,72 +13,89 @@ class CerboVrm {
     static inline int16_t a = 0;
     static inline CURL* curl;
     static inline CURLcode res;
-    static inline std::string responseString;
-    static inline nlohmann::json responseJson;
 
-    static inline ApiTypes::UserValues login;
-    static inline ApiTypes::ConnectionState connectionState{ApiTypes::ConnectionState::OFFLINE};
+    static inline ApiTypes::ConnectionData conn;
 
-    static ApiTypes::UserValues ReadUserValues() {
-        ApiTypes::UserValues login;
+    static ApiTypes::LoginData ReadUserValues() {
+        ApiTypes::LoginData conn;
         std::string filename = "B:/Programmieren/C/CerboEnergy/doc/passwordApi.txt";
         std::ifstream loginStream(filename);
         std::string temp;
         if (!loginStream.is_open()) {
             std::string errorText = "Can't open file" + filename;
             CerboLog::AddEntry(errorText, LogTypes::Categories::FAILURE);
-            return login;
+            return conn;
         }
-        if (!std::getline(loginStream, login.userName)) {
+        if (!std::getline(loginStream, conn.userName)) {
             CerboLog::AddEntry("Username line missing in file.", LogTypes::Categories::FAILURE);
         }
-        if (!std::getline(loginStream, login.password)) {
+        if (!std::getline(loginStream, conn.password)) {
             CerboLog::AddEntry("Password line missing in file.", LogTypes::Categories::FAILURE);
         }
         if (!std::getline(loginStream, temp)) {
             CerboLog::AddEntry("SiteID line missing in file.", LogTypes::Categories::FAILURE);
         }
-        login.siteID = std::stoi(temp);
-        return login;
+        conn.siteID = std::stoi(temp);
+        return conn;
     }
 
     static std::string formatUrl(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
-        std::string returnString = "https://vrmapi.victronenergy.com/v2/" + std::to_string(login.siteID) + "installations/237026/stats?";
+        std::string returnString = "https://vrmapi.victronenergy.com/v2/" + std::to_string(conn.login.siteID) + "installations/237026/stats?";
         returnString += "start=" + std::to_string(static_cast<int32_t>(start.ms / 1000)) + "&end=" + std::to_string(static_cast<int32_t>(end.ms / 1000)) + "&interval=days";
         return returnString;
     }
 
-    static bool ParseToken() {
-        responseJson = nlohmann::json::parse(responseString);
-        if (responseJson.contains("token")) {
-            login.token = responseJson["token"];
-            return true;
+    static void ParseData() {
+        conn.responseJson = nlohmann::json::parse(conn.responseString);
+        if (!ReadResponseInfo()) {
+            CerboLog::AddEntry("API responded with error.", LogTypes::Categories::FAILURE);
+            return;
         }
-        return false;
-    }
-
-    static bool ParseData() {
-        responseJson = nlohmann::json::parse(responseString);
-        return false;
-    }
-
-    static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
-        size_t totalSize = size * nmemb;
-        s->append(static_cast<char*>(contents), totalSize);
-        switch (connectionState) {
+        switch (conn.state) {
             case ApiTypes::ConnectionState::AUTHENTICATING:
-                if (ParseToken()) {
-                    connectionState = ApiTypes::ConnectionState::AUTHENTICATED;
+                if (ReadToken()) {
+                    conn.state = ApiTypes::ConnectionState::AUTHENTICATED;
                 }
                 break;
             case ApiTypes::ConnectionState::REQUESTING:
-                if (ParseData()) {
-                    connectionState = ApiTypes::ConnectionState::DATA_RECEIVED;
+                if (ReadData()) {
+                    conn.state = ApiTypes::ConnectionState::DATA_RECEIVED;
                 }
                 break;
             default:
                 break;
         }
+    }
+
+    static bool ReadResponseInfo() {
+        if (conn.responseJson.contains("success")) {
+            conn.responseInfo.success = conn.responseJson["success"];
+        }
+        if (conn.responseJson.contains("errors")) {
+            conn.responseInfo.errors = conn.responseJson["errors"];
+        }
+        if (conn.responseJson.contains("errorCode")) {
+            conn.responseInfo.errorCode = conn.responseJson["errorCode"];
+        }
+        return conn.responseInfo.success;
+    }
+
+    static bool ReadToken() {
+        CerboLog::AddEntry(conn.responseString, LogTypes::Categories::INFORMATION);
+        conn.responseJson = nlohmann::json::parse(conn.responseString);
+        if (conn.responseJson.contains("token")) {
+            conn.login.token = conn.responseJson["token"];
+            return true;
+        }
+        return false;
+    }
+
+    static bool ReadData() { return false; }
+
+    static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
+        size_t totalSize = size * nmemb;
+        s->append(static_cast<char*>(contents), totalSize);
+        ParseData();
         return totalSize;
     }
 
@@ -86,19 +103,23 @@ class CerboVrm {
     static void Connect() {
         curl = curl_easy_init();
         if (curl) {
-            login = ReadUserValues();
-            connectionState = ApiTypes::ConnectionState::AUTHENTICATING;
-            curl_easy_setopt(curl, CURLOPT_URL, "https://vrmapi.victronenergy.com/v2/auth/login");
+            conn.login = ReadUserValues();
+
+            conn.responseString.clear();
+            conn.responseJson.clear();
+
+            conn.state = ApiTypes::ConnectionState::AUTHENTICATING;
+            curl_easy_setopt(curl, CURLOPT_URL, "https://vrmapi.victronenergy.com/v2/auth/conn");
             curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_3);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseString);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &conn.responseString);
 
             struct curl_slist* headers = NULL;
             headers = curl_slist_append(headers, "Content-Type: application/json");
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-            std::string payload = "{\n  \"username\": \"" + login.userName + "\",\n  \"password\": \"" + login.password + "\"\n}";
+            std::string payload = "{\n  \"username\": \"" + conn.login.userName + "\",\n  \"password\": \"" + conn.login.password + "\"\n}";
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
             res = curl_easy_perform(curl);
@@ -107,30 +128,43 @@ class CerboVrm {
                 curl_easy_cleanup(curl);
                 return;
             }
-            connectionState = ApiTypes::ConnectionState::AUTHENTICATED;
+            conn.state = ApiTypes::ConnectionState::AUTHENTICATED;
             CerboLog::AddEntry("Successfully logged in.", LogTypes::Categories::SUCCESS);
         }
     }
 
     static void GetData(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
-        connectionState = ApiTypes::ConnectionState::REQUESTING;
+        conn.responseString.clear();
+        conn.responseJson.clear();
+
+        conn.state = ApiTypes::ConnectionState::REQUESTING;
         const std::string url = formatUrl(start, end);
         const std::string messageString = "Attempting to connect via: " + url;
+        CerboLog::AddEntry(messageString, LogTypes::Categories::INFORMATION);
+
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        CerboLog::AddEntry(messageString, LogTypes::Categories::INFORMATION);
+
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        const std::string headerString = "x-authorization: Bearer " + conn.login.token;
+        headers = curl_slist_append(headers, headerString.c_str());
+
         CURLcode ret = curl_easy_perform(curl);
         if (ret != CURLE_OK) {
             CerboLog::AddEntry("Error getting data.", LogTypes::Categories::FAILURE);
             return;
         }
-        connectionState = ApiTypes::ConnectionState::DATA_RECEIVED;
+        conn.state = ApiTypes::ConnectionState::DATA_RECEIVED;
     }
 
-    static ApiTypes::ConnectionState GetConnectionState() { return connectionState; }
+    static ApiTypes::ConnectionState GetConnectionState() { return conn.state; }
 
     static void Disconnect() {
+        conn.responseString.clear();
+        conn.responseJson.clear();
+
         curl_easy_cleanup(curl);
-        connectionState = ApiTypes::ConnectionState::OFFLINE;
+        conn.state = ApiTypes::ConnectionState::OFFLINE;
     }
 };
