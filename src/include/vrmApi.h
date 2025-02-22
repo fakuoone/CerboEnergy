@@ -40,12 +40,18 @@ class CerboVrm {
     }
 
     static std::string formatUrl(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
-        std::string returnString = "https://vrmapi.victronenergy.com/v2/" + std::to_string(conn.login.siteID) + "installations/237026/stats?";
+        std::string returnString = "https://vrmapi.victronenergy.com/v2/installations/" + std::to_string(conn.login.siteID) + "/stats?";
         returnString += "start=" + std::to_string(static_cast<int32_t>(start.ms / 1000)) + "&end=" + std::to_string(static_cast<int32_t>(end.ms / 1000)) + "&interval=days";
         return returnString;
     }
 
+    static std::string formatOverviewUrl() {
+        std::string returnString = "https://vrmapi.victronenergy.com/v2/installations/" + std::to_string(conn.login.siteID) + "/system-overview";
+        return returnString;
+    }
+
     static void ParseData() {
+        CerboLog::AddEntry(conn.responseString, LogTypes::Categories::INFORMATION);
         conn.responseJson = nlohmann::json::parse(conn.responseString);
         if (!ReadResponseInfo()) {
             CerboLog::AddEntry("API responded with error.", LogTypes::Categories::FAILURE);
@@ -68,6 +74,10 @@ class CerboVrm {
     }
 
     static bool ReadResponseInfo() {
+        if (conn.responseJson.contains("token")) {
+            conn.responseInfo.success = true;
+            return true;
+        }
         if (conn.responseJson.contains("success")) {
             conn.responseInfo.success = conn.responseJson["success"];
         }
@@ -81,7 +91,6 @@ class CerboVrm {
     }
 
     static bool ReadToken() {
-        CerboLog::AddEntry(conn.responseString, LogTypes::Categories::INFORMATION);
         conn.responseJson = nlohmann::json::parse(conn.responseString);
         if (conn.responseJson.contains("token")) {
             conn.login.token = conn.responseJson["token"];
@@ -109,7 +118,7 @@ class CerboVrm {
             conn.responseJson.clear();
 
             conn.state = ApiTypes::ConnectionState::AUTHENTICATING;
-            curl_easy_setopt(curl, CURLOPT_URL, "https://vrmapi.victronenergy.com/v2/auth/conn");
+            curl_easy_setopt(curl, CURLOPT_URL, "https://vrmapi.victronenergy.com/v2/auth/login");
             curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_3);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
@@ -138,17 +147,23 @@ class CerboVrm {
         conn.responseJson.clear();
 
         conn.state = ApiTypes::ConnectionState::REQUESTING;
-        const std::string url = formatUrl(start, end);
-        const std::string messageString = "Attempting to connect via: " + url;
+        const std::string url = formatOverviewUrl();  //formatUrl(start, end);
+        const std::string authHeader = "x-authorization: Bearer " + conn.login.token;
+        std::string messageString = "Attempting to connect via: " + url + " \nWith header:";
+
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        headers = curl_slist_append(headers, authHeader.c_str());
+
+        struct curl_slist* temp = headers;
+        while (temp) {
+            messageString += "\n" + std::string(temp->data);
+            temp = temp->next;
+        }
         CerboLog::AddEntry(messageString, LogTypes::Categories::INFORMATION);
 
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-        struct curl_slist* headers = NULL;
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-        const std::string headerString = "x-authorization: Bearer " + conn.login.token;
-        headers = curl_slist_append(headers, headerString.c_str());
 
         CURLcode ret = curl_easy_perform(curl);
         if (ret != CURLE_OK) {
