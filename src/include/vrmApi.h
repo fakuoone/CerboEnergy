@@ -128,7 +128,7 @@ class CerboVrm {
             headers = curl_slist_append(headers, "Content-Type: application/json");
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-            std::string payload = "{\n  \"username\": \"" + conn.login.userName + "\",\n  \"password\": \"" + conn.login.password + "\"\n}";
+            std::string payload = "{\n  \"username\": \"" + conn.login.userName + "\",\n  \"password\": \"" + conn.login.password + +"\",\n  \"remember-me\": \"true\"\n}";
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
             res = curl_easy_perform(curl);
@@ -143,6 +143,7 @@ class CerboVrm {
     }
 
     static void GetData(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
+        CURLcode ret;
         conn.responseString.clear();
         conn.responseJson.clear();
 
@@ -151,21 +152,19 @@ class CerboVrm {
         const std::string authHeader = "x-authorization: Bearer " + conn.login.token;
         std::string messageString = "Attempting to connect via: " + url + " \nWith header:";
 
+        ret = curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+        ret = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
         struct curl_slist* headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
         headers = curl_slist_append(headers, authHeader.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        struct curl_slist* temp = headers;
-        while (temp) {
-            messageString += "\n" + std::string(temp->data);
-            temp = temp->next;
-        }
-        CerboLog::AddEntry(messageString, LogTypes::Categories::INFORMATION);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
 
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-        CURLcode ret = curl_easy_perform(curl);
+        ret = curl_easy_perform(curl);
         if (ret != CURLE_OK) {
             CerboLog::AddEntry("Error getting data.", LogTypes::Categories::FAILURE);
             return;
