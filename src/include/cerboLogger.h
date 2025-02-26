@@ -32,7 +32,9 @@ TimingTypes::TimeStruct GetTimeFromSeconds(int32_t seconds) {
     oss << std::put_time(&tm, "%H:%M:%S");            // Format time as HH:MM:SS
     oss << ":" << std::setfill('0') << std::setw(3);  // Append milliseconds
 
-    return TimingTypes::TimeStruct{oss.str(), seconds * 1000};
+    int64_t ms = static_cast<int64_t>(seconds) * 1000;
+
+    return TimingTypes::TimeStruct{oss.str(), ms};
 }
 }  // namespace Timing
 

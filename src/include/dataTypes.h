@@ -25,12 +25,10 @@ struct Log {
 }  // namespace LogTypes
 
 namespace TimingTypes {
-typedef int64_t milliseconds;
 struct TimeStruct {
     std::string msString;
-    milliseconds ms;
+    int64_t ms;
 
-    // I don't like ctor for struct with all public members. Use init lists instead
     TimeStruct(std::string cMsString, int64_t cMs) : msString{cMsString}, ms{cMs} {}
 };
 }  // namespace TimingTypes
@@ -145,8 +143,8 @@ struct IsInPlot {
 
 struct Entries {
     struct TimeSpanSummary {
-        TimingTypes::milliseconds start;
-        TimingTypes::milliseconds end;
+        int64_t start;
+        int64_t end;
         double avg;
         double max;
         double min;
@@ -279,4 +277,14 @@ struct ConnectionData {
     ConnectionState state;
 };
 
+enum StatType { VENUS, LIVE_FEED, CONSUMPTION, SOLAR_YIELD, KWH, GENERATOR, GENERATOR_RUNTIME, FORECAST };
+
+std::map<StatType, std::string> StatTypeMap = {{StatType::VENUS, "venus"},
+                                               {StatType::LIVE_FEED, "live_feed"},
+                                               {StatType::CONSUMPTION, "consumption"},
+                                               {StatType::SOLAR_YIELD, "solar_yield"},
+                                               {StatType::KWH, "kwh"},
+                                               {StatType::GENERATOR, "generator"},
+                                               {StatType::GENERATOR_RUNTIME, "generator_runtime"},
+                                               {StatType::FORECAST, "forecast"}};
 }  // namespace ApiTypes

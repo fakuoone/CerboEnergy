@@ -39,15 +39,27 @@ class CerboVrm {
         return conn;
     }
 
-    static std::string formatUrl(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end) {
+    static std::string FormatUrl(TimingTypes::TimeStruct start, TimingTypes::TimeStruct end, ApiTypes::StatType type) {
         std::string returnString = "https://vrmapi.victronenergy.com/v2/installations/" + std::to_string(conn.login.siteID) + "/stats?";
-        returnString += "start=" + std::to_string(static_cast<int32_t>(start.ms / 1000)) + "&end=" + std::to_string(static_cast<int32_t>(end.ms / 1000)) + "&interval=days";
+        returnString += "start=" + std::to_string(static_cast<int32_t>(start.ms / 1000));
+        returnString += "&end=" + std::to_string(static_cast<int32_t>(end.ms / 1000)) + "&interval=days";
+        returnString += "&type=" + ApiTypes::StatTypeMap.at(type);
         return returnString;
     }
 
-    static std::string formatOverviewUrl() {
+    static std::string FormatOverviewUrl() {
         std::string returnString = "https://vrmapi.victronenergy.com/v2/installations/" + std::to_string(conn.login.siteID) + "/system-overview";
         return returnString;
+    }
+
+    static CURLcode TriggerRequest() {
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            CerboLog::AddEntry("Error getting data.", LogTypes::Categories::FAILURE);
+            return res;
+        }
+        ParseData();
+        return CURLE_OK;
     }
 
     static void ParseData() {
@@ -99,12 +111,14 @@ class CerboVrm {
         return false;
     }
 
-    static bool ReadData() { return false; }
+    static bool ReadData() {
+        return false;
+        conn.responseJson = nlohmann::json::parse(conn.responseString);
+    }
 
     static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
         size_t totalSize = size * nmemb;
         s->append(static_cast<char*>(contents), totalSize);
-        ParseData();
         return totalSize;
     }
 
@@ -131,14 +145,7 @@ class CerboVrm {
             std::string payload = "{\n  \"username\": \"" + conn.login.userName + "\",\n  \"password\": \"" + conn.login.password + +"\",\n  \"remember-me\": \"true\"\n}";
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
-            res = curl_easy_perform(curl);
-            if (res != CURLE_OK) {
-                CerboLog::AddEntry("Error loggin in.", LogTypes::Categories::FAILURE);
-                curl_easy_cleanup(curl);
-                return;
-            }
-            conn.state = ApiTypes::ConnectionState::AUTHENTICATED;
-            CerboLog::AddEntry("Successfully logged in.", LogTypes::Categories::SUCCESS);
+            TriggerRequest();
         }
     }
 
@@ -148,7 +155,7 @@ class CerboVrm {
         conn.responseJson.clear();
 
         conn.state = ApiTypes::ConnectionState::REQUESTING;
-        const std::string url = formatOverviewUrl();  //formatUrl(start, end);
+        const std::string url = FormatUrl(start, end, ApiTypes::StatType::CONSUMPTION);  // TBD: WELCHE DATEN WANN
         const std::string authHeader = "x-authorization: Bearer " + conn.login.token;
         std::string messageString = "Attempting to connect via: " + url + " \nWith header:";
 
@@ -164,12 +171,7 @@ class CerboVrm {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
 
-        ret = curl_easy_perform(curl);
-        if (ret != CURLE_OK) {
-            CerboLog::AddEntry("Error getting data.", LogTypes::Categories::FAILURE);
-            return;
-        }
-        conn.state = ApiTypes::ConnectionState::DATA_RECEIVED;
+        TriggerRequest();
     }
 
     static ApiTypes::ConnectionState GetConnectionState() { return conn.state; }

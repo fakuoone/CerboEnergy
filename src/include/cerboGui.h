@@ -123,7 +123,9 @@ class App {
                 ImGui::TableNextColumn();
                 const bool enableRead = CerboVrm::GetConnectionState() >= ApiTypes::ConnectionState::AUTHENTICATED && SSHDataHandler::DataAvailable();
                 if (AddAppControlButton("Daten lesen##3", enableRead, readIcon, false, 1, 1, maxWidth)) {
-                    CerboVrm::GetData(VisualizerInstance->GetFirstTime(), Timing::GetTimeNow());
+                    TimingTypes::TimeStruct start = VisualizerInstance->GetFirstTime();
+                    TimingTypes::TimeStruct end = Timing::GetTimeNow();
+                    CerboVrm::GetData(start, end);
                 }
                 ImGui::TableNextColumn();
                 if (AddAppControlButton("Verbindung trennen##3", true, disConnectIcon, false, 1, 1, maxWidth)) {
