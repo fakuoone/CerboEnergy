@@ -152,20 +152,3 @@ class SSHDataHandler {
 
     static uint16_t GetDataCategories() { return CD.DataCategories; }
 };
-
-class APIDataHandler  // whats that?
-{
-   private:
-    int16_t a = 0;
-
-   public:
-    void foo() {}
-};
-
-class RTDataHandler {
-   private:
-    int64_t a;
-
-   public:
-    void foo() {}
-};

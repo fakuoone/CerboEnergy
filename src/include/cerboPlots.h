@@ -3,6 +3,7 @@
 #include "cerboLogger.h"
 #include "dataHandler.h"
 #include "helperFunctions.h"
+#include "vrmApi.h"
 
 #include "imgui.h"
 #include "implot.h"
@@ -346,7 +347,7 @@ class Visualizer {
     }
 
    public:
-    void GetData(const std::string& rawData) {
+    void GetSSHData(const std::string& rawData) {
         if (rawData == "") {
             return;
         }
@@ -359,6 +360,14 @@ class Visualizer {
                 SSHDataHandler::ComputeAnalytics(ED);
                 AddPlot(0, xdata, ED.Daily.Es[SSHDataHandler::GetPlotKey(1)], PDTypes::PlotTypes::BARS, PDTypes::DragSource::SSHRAW, 1);
             }
+        }
+    }
+
+    void GetAPIData() {
+        if (CerboVrm::DataAvailable()) {
+            CerboVrm::GetTimes(ED.VRM.Times);
+            CerboVrm::GetEnergies(ED.VRM.Es);
+            return;
         }
     }
 

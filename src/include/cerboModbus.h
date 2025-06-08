@@ -127,6 +127,10 @@ class CerboModbus {
         System.AddRegister(Register{"Verbrauch L3", 819, DataUnits::WATT, 1, 2000});
         AddUnit(Devices::SYSTEM, System);
 
+        ModbusUnit Charger{226, "Laderegler"};
+        Charger.AddRegister(Register{"Leistung String 3", 789, DataUnits::WATT, 10, 2000});
+        AddUnit(Devices::CHARGER, Charger);
+
         ModbusUnit Battery{225, "Akku"};
         Battery.AddRegister(Register{"Spannung", 259, DataUnits::VOLT, 100, 2000});
         Battery.AddRegister(Register{"Strom", 261, DataUnits::AMPERE, 10, 2000});

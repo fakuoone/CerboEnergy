@@ -163,7 +163,8 @@ struct EnergyStruct {
         std::vector<int32_t> Times;
     };
     struct VRMData {
-        int16_t a{0};
+        std::unordered_map<std::string, Entries> Es;
+        std::vector<int32_t> Times;
     };
     DailyData Daily;
     VRMData VRM;
@@ -185,7 +186,7 @@ enum ConnectionState { OFFLINE, SESSION, CONNECTED, AUTHENTICATED, EXECUTED_CMD,
 const std::unordered_map<ConnectionState, uint16_t> ProgressLookup{{ConnectionState::OFFLINE, 0},       {ConnectionState::SESSION, 1},      {ConnectionState::CONNECTED, 2},
                                                                    {ConnectionState::AUTHENTICATED, 3}, {ConnectionState::EXECUTED_CMD, 4}, {ConnectionState::READ_RESULT, 5}};
 
-enum class Devices { SYSTEM, BATTERY, VEBUS };
+enum class Devices { SYSTEM, BATTERY, CHARGER, VEBUS };
 
 enum class DataUnits { WATT, KILOWATT, DEGREE_C, VOLT, AMPERE, PERCENT };
 

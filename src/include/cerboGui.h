@@ -82,7 +82,7 @@ class App {
                 if (AddAppControlButton("Daten lesen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::CONNECTED, readIcon, false, 1, 1, maxWidth)) {
                     SSHDataHandler::ResetSSHData();
                     CerboSSH::ReadEnergyFile();
-                    VisualizerInstance->GetData(CerboSSH::GetRawString());
+                    VisualizerInstance->GetSSHData(CerboSSH::GetRawString());
                 }
                 ImGui::TableNextColumn();
                 if (AddAppControlButton("Verbindung trennen", CerboSSH::GetConnectionState() >= SSHTypes::ConnectionState::SESSION, disConnectIcon, true, 1, 1, maxWidth)) {
@@ -256,6 +256,13 @@ class App {
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
+            if (ImGui::BeginTabItem("Charger")) {
+                ImGui::BeginChild("Charger");
+                AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::CHARGER));
+                VisualizerInstance->PlotRealTimeData(ModbusTypes::Devices::CHARGER);
+                ImGui::EndChild();
+                ImGui::EndTabItem();
+            }
             if (ImGui::BeginTabItem("Batteriedaten")) {
                 ImGui::BeginChild("Batteriedaten");
                 AddRealTimeUnitData(CerboModbus::GetUnit(ModbusTypes::Devices::BATTERY));
@@ -359,7 +366,7 @@ class App {
 
         BeginWindow("Steuerung");
         AddAppControls();
-        VisualizerInstance->GetData(CerboSSH::GetRawString());
+        VisualizerInstance->GetSSHData(CerboSSH::GetRawString());
 
         BeginWindow("Graph");
         VisualizerInstance->PlotGraph();

@@ -174,7 +174,7 @@ class CerboVrm {
         TriggerRequest();
     }
 
-    static ApiTypes::ConnectionState GetConnectionState() { return conn.state; }
+    static const ApiTypes::ConnectionState GetConnectionState() { return conn.state; }
 
     static void Disconnect() {
         conn.responseString.clear();
@@ -183,4 +183,10 @@ class CerboVrm {
         curl_easy_cleanup(curl);
         conn.state = ApiTypes::ConnectionState::OFFLINE;
     }
+
+    static const bool DataAvailable() { return conn.state == ApiTypes::ConnectionState::DATA_RECEIVED; }
+
+    static const void GetTimes(std::vector<int32_t>& ED) { return; }
+
+    static const void GetEnergies(std::unordered_map<std::string, PDTypes::Entries>& energies) { return; }
 };
