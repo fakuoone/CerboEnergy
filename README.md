@@ -4,7 +4,7 @@ Hierbei handelt es sich um ein Datenvisualisierungsprogramm, das Daten verschied
 
 ## Aktueller Stand
 
-Das Projekt ist ein Grundgerüst, welches noch ausgebaut wird und als "C++ - Übungsprojekt" dient
+Das Projekt ist ein Grundgerüst, welches noch ausgebaut wird und als "C++ - Übungsprojekt" dient.
 Ein Programm kann ohne Modifikationen nicht selbst gebaut werden, da wichtige Konfigurationen nur durch Änderung des Quellcodes gemacht werden können.
 
 ## Datenquellen
